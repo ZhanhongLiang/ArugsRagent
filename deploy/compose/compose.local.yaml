@@ -1,0 +1,12 @@
+services:
+  api:
+    image: ${RAGENT_API_IMAGE:-ragent-api:local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+
+  web:
+    image: ${RAGENT_WEB_IMAGE:-ragent-web:local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web

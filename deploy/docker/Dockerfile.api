@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1.7
+
+FROM eclipse-temurin:17-jdk-jammy AS build
+WORKDIR /workspace
+
+COPY mvnw mvnw.cmd pom.xml ./
+COPY .mvn .mvn
+COPY bootstrap bootstrap
+COPY framework framework
+COPY infra-ai infra-ai
+COPY mcp-server mcp-server
+COPY resources/format resources/format
+
+RUN chmod +x ./mvnw || true
+RUN ./mvnw -B -ntp -pl bootstrap -am package -DskipTests
+
+FROM eclipse-temurin:17-jre-jammy AS runtime
+WORKDIR /app
+
+RUN groupadd --system ragent && useradd --system --gid ragent --home-dir /app --shell /usr/sbin/nologin ragent
+
+COPY --from=build /workspace/bootstrap/target/*.jar /app/ragent-api.jar
+
+RUN test -s /app/ragent-api.jar && chown -R ragent:ragent /app
+
+USER ragent
+EXPOSE 9090
+
+ENV JAVA_OPTS="" \
+    SPRING_PROFILES_ACTIVE=prod
+
+ENTRYPOINT ["sh", "-c", "test -s /app/ragent-api.jar || { echo 'Missing /app/ragent-api.jar' >&2; exit 64; }; exec java $JAVA_OPTS -jar /app/ragent-api.jar"]

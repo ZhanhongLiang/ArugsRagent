@@ -1,0 +1,80 @@
+target/
+temp
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+!.idea/dictionaries/
+!.idea/inspectionProfiles/
+!.idea/scopes/
+!.idea/icon.png
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+scripts/logs/
+
+### Frontend ###
+node_modules/
+dist/
+.vite/
+.env.local
+### Local environment and secrets ###
+.env
+.env.*
+!.env.example
+!**/.env.example
+frontend/.env
+frontend/.env.*
+deploy/compose/.env
+deploy/compose/application-prod.yaml
+**/application-local.yaml
+**/application-local.yml
+**/application-*.local.yaml
+**/application-*.local.yml
+**/settings.local.json
+.claude/settings.local.json
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cert
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+### Local dependency caches ###
+.m2/
+### Local backend secrets ###
+bootstrap/src/main/resources/application-local.yaml
+### RAG evaluation local runtime artifacts ###
+eval/rag/state/*.json
+eval/rag/runs/*.jsonl
+eval/rag/reports/

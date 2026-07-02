@@ -1,0 +1,30 @@
+services:
+  api:
+    image: ${RAGENT_API_IMAGE:?Set RAGENT_API_IMAGE in the env file}
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_CONFIG_ADDITIONAL_LOCATION: ${SPRING_CONFIG_ADDITIONAL_LOCATION:-optional:file:/config/}
+      JAVA_OPTS: ${RAGENT_API_JAVA_OPTS:-}
+    volumes:
+      - ${RAGENT_API_CONFIG_FILE:?Set RAGENT_API_CONFIG_FILE to a local application-prod.yaml}:/config/application-prod.yaml:ro
+    networks:
+      - ragent-runtime
+    # No host port is published for API. Web is the only public entrypoint.
+    # Blocker: this codebase does not currently expose Spring Boot Actuator or another unauthenticated health endpoint.
+    # Keep the runtime contract private and document the missing health endpoint in deploy/README.md.
+
+  web:
+    image: ${RAGENT_WEB_IMAGE:?Set RAGENT_WEB_IMAGE in the env file}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${RAGENT_WEB_BIND_HOST:-127.0.0.1}:${RAGENT_WEB_PORT:-18080}:8080"
+    networks:
+      - ragent-runtime
+
+networks:
+  ragent-runtime:
+    driver: bridge
+    internal: false

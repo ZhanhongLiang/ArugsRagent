@@ -1,0 +1,386 @@
+{
+  "overall": {
+    "intent_top1": 1.0,
+    "hit@5": 0.6666666666666666,
+    "recall@5": 0.4722222222222222,
+    "mrr@10": 0.48796296296296293,
+    "latency_ms": 3860.45
+  },
+  "by_intent_l2": {
+    "S1_选购推荐": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 0.41666666666666663,
+      "latency_ms": 3999.0
+    },
+    "S2_参数咨询": {
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 4198.0
+    },
+    "S3_对比选购": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 0.2,
+      "latency_ms": 3729.0
+    },
+    "S4_价格活动": {
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 3907.0
+    },
+    "S5_库存到货": {
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 5072.0
+    },
+    "S6_茶具兼容": {
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 4073.0
+    },
+    "S8_冲泡指引": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 1.0,
+      "latency_ms": 3755.0
+    },
+    "S9_设备配网": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 0.25,
+      "latency_ms": 3984.0
+    },
+    "S10_APP功能": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 1.0,
+      "latency_ms": 3909.0
+    },
+    "S11_固件升级": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 1.0,
+      "latency_ms": 3460.0
+    },
+    "S12_设备联动": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 1.0,
+      "latency_ms": 3857.0
+    },
+    "S13_保养维护": {
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 4480.0
+    },
+    "S14_售后政策": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 1.0,
+      "latency_ms": 3224.0
+    },
+    "S15_退换货": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 1.0,
+      "latency_ms": 3629.0
+    },
+    "S16_物流配送": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 1.0,
+      "latency_ms": 4629.0
+    },
+    "S17_发票会员": {
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 0.5,
+      "latency_ms": 3919.0
+    },
+    "F1_故障报告": {
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 3795.0
+    },
+    "F2_功能建议": {
+      "intent_top1": 1.0,
+      "hit@5": null,
+      "recall@5": null,
+      "mrr@10": null,
+      "latency_ms": 2862.0
+    },
+    "F3_投诉吐槽": {
+      "intent_top1": 1.0,
+      "hit@5": null,
+      "recall@5": null,
+      "mrr@10": null,
+      "latency_ms": 2729.0
+    }
+  },
+  "per_sample": [
+    {
+      "query_id": "S1-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S1_选购推荐",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 0.3333333333333333,
+      "latency_ms": 3890,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S2-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S2_参数咨询",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 4198,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S3-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S3_对比选购",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 0.2,
+      "latency_ms": 3729,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S4-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S4_价格活动",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 3907,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S5-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S5_库存到货",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 5072,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S6-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S6_茶具兼容",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 4073,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S8-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S8_冲泡指引",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 1.0,
+      "latency_ms": 3755,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S9-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S9_设备配网",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 0.25,
+      "latency_ms": 3984,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S10-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S10_APP功能",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 1.0,
+      "latency_ms": 3909,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S11-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S11_固件升级",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 1.0,
+      "latency_ms": 3460,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S12-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S12_设备联动",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 1.0,
+      "latency_ms": 3857,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S13-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S13_保养维护",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 4480,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S14-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S14_售后政策",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 1.0,
+      "latency_ms": 3224,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S15-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S15_退换货",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "mrr@10": 1.0,
+      "latency_ms": 3629,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S16-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S16_物流配送",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 1.0,
+      "latency_ms": 4629,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S17-01",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S17_发票会员",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 0.5,
+      "latency_ms": 3919,
+      "final_status": "success"
+    },
+    {
+      "query_id": "F1-01",
+      "intent_l1": "FEEDBACK",
+      "intent_l2": "F1_故障报告",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": 0.0,
+      "recall@5": 0.0,
+      "mrr@10": 0.0,
+      "latency_ms": 3795,
+      "final_status": "success"
+    },
+    {
+      "query_id": "F2-01",
+      "intent_l1": "FEEDBACK",
+      "intent_l2": "F2_功能建议",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": null,
+      "recall@5": null,
+      "mrr@10": null,
+      "latency_ms": 2862,
+      "final_status": "success"
+    },
+    {
+      "query_id": "F3-01",
+      "intent_l1": "FEEDBACK",
+      "intent_l2": "F3_投诉吐槽",
+      "difficulty": "easy",
+      "intent_top1": 1.0,
+      "hit@5": null,
+      "recall@5": null,
+      "mrr@10": null,
+      "latency_ms": 2729,
+      "final_status": "success"
+    },
+    {
+      "query_id": "S1-02",
+      "intent_l1": "SUPPORT",
+      "intent_l2": "S1_选购推荐",
+      "difficulty": "medium",
+      "intent_top1": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 0.5,
+      "mrr@10": 0.5,
+      "latency_ms": 4108,
+      "final_status": "success"
+    }
+  ]
+}
