@@ -159,5 +159,54 @@ jobs:
             echo "- API: \`${API_IMAGE}:${GITHUB_SHA}\`"
             echo "- Web: \`${WEB_IMAGE}:${GITHUB_SHA}\`"
             echo
-            echo "Initial deployment remains manual on the server after the Stage 2 validation scripts approve this exact SHA."
+            echo "Deployment is handed off to the production server after both immutable images are published."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy published release to production
+    needs: publish
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Validate production SSH secrets
+        shell: bash
+        run: |
+          test -n "${{ secrets.PROD_HOST }}" || { echo "Missing secret: PROD_HOST" >&2; exit 1; }
+          test -n "${{ secrets.PROD_USER }}" || { echo "Missing secret: PROD_USER" >&2; exit 1; }
+          test -n "${{ secrets.PROD_SSH_PORT }}" || { echo "Missing secret: PROD_SSH_PORT" >&2; exit 1; }
+          test -n "${{ secrets.PROD_SSH_KEY }}" || { echo "Missing secret: PROD_SSH_KEY" >&2; exit 1; }
+
+      - name: Install SSH key
+        shell: bash
+        run: |
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' '${{ secrets.PROD_SSH_KEY }}' > ~/.ssh/ragent_prod_key
+          chmod 0600 ~/.ssh/ragent_prod_key
+          if test -n '${{ secrets.PROD_SSH_KNOWN_HOSTS }}'; then
+            printf '%s\n' '${{ secrets.PROD_SSH_KNOWN_HOSTS }}' > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p '${{ secrets.PROD_SSH_PORT }}' '${{ secrets.PROD_HOST }}' > ~/.ssh/known_hosts
+          fi
+          chmod 0644 ~/.ssh/known_hosts
+
+      - name: Deploy release on production server
+        shell: bash
+        run: |
+          ssh \
+            -i ~/.ssh/ragent_prod_key \
+            -p '${{ secrets.PROD_SSH_PORT }}' \
+            '${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}' \
+            '/opt/ragent/bin/deploy-release.sh "${{ github.sha }}"'
+
+      - name: Record deployment summary
+        shell: bash
+        run: |
+          {
+            echo "## Production deployment"
+            echo
+            echo "- Release SHA: \`${GITHUB_SHA}\`"
+            echo "- Server: \`${{ secrets.PROD_HOST }}\`"
+            echo "- Entrypoint: \`/opt/ragent/bin/deploy-release.sh ${GITHUB_SHA}\`"
           } >> "$GITHUB_STEP_SUMMARY"
