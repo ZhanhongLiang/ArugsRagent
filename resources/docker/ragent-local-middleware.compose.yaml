@@ -1,0 +1,135 @@
+name: ragent-local-middleware
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ragent-postgres
+    environment:
+      POSTGRES_DB: ragent
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ragent-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ragent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: ragent-redis
+    command: ["redis-server", "--requirepass", "123456"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - ragent-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "123456", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  rmqnamesrv:
+    image: apache/rocketmq:5.2.0
+    container_name: ragent-rmqnamesrv
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx400m"
+    command: sh mqnamesrv
+    ports:
+      - "9876:9876"
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q 'The Name Server boot success' /home/rocketmq/logs/rocketmqlogs/namesrv.log || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  rmqbroker:
+    image: apache/rocketmq:5.2.0
+    container_name: ragent-rmqbroker
+    environment:
+      NAMESRV_ADDR: "ragent-rmqnamesrv:9876"
+      JAVA_OPT_EXT: "-Xms512m -Xmx512m"
+    depends_on:
+      rmqnamesrv:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        cat > /home/rocketmq/rocketmq-5.2.0/conf/broker.conf << EOF
+        brokerClusterName = DefaultCluster
+        brokerName = broker-a
+        brokerId = 0
+        deleteWhen = 04
+        fileReservedTime = 48
+        brokerRole = ASYNC_MASTER
+        flushDiskType = ASYNC_FLUSH
+        brokerIP1 = 127.0.0.1
+        listenPort = 11911
+        timerMaxDelaySec = 31622400
+        EOF
+        sh mqbroker --enable-proxy \
+          -c /home/rocketmq/rocketmq-5.2.0/conf/broker.conf
+    ports:
+      - "11909:11909"
+      - "11911:11911"
+      - "11912:11912"
+      - "18080:8080"
+      - "18081:8081"
+      - "8082:8082"
+    restart: unless-stopped
+
+  rocketmq-dashboard:
+    image: apacherocketmq/rocketmq-dashboard:2.1.0
+    container_name: ragent-rocketmq-dashboard
+    network_mode: "service:rmqbroker"
+    environment:
+      JAVA_OPTS: >-
+        -Xms256m -Xmx512m
+        -XX:MaxMetaspaceSize=256m
+        -Drocketmq.config.enableDashBoardCollect=false
+        -Drocketmq.namesrv.addr=ragent-rmqnamesrv:9876
+        -Dserver.port=8082
+    depends_on:
+      rmqbroker:
+        condition: service_started
+    restart: unless-stopped
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.72
+    container_name: ragent-rustfs
+    command:
+      - "--address"
+      - ":9000"
+      - "--console-enable"
+      - "--access-key"
+      - "rustfsadmin"
+      - "--secret-key"
+      - "rustfsadmin"
+      - "/data"
+    environment:
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports:
+      - "29000:9000"
+      - "29001:9001"
+    volumes:
+      - ragent-rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:9001/rustfs/console/index.html >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  ragent-pgdata:
+  ragent-redis-data:
+  ragent-rustfs-data:
