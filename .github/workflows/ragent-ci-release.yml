@@ -31,7 +31,9 @@ jobs:
           cache: maven
 
       - name: Verify backend
-        run: ./mvnw -B -ntp -pl bootstrap -am verify
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B -ntp -pl bootstrap -am verify
 
       - name: Set up Node 20
         uses: actions/setup-node@v4
