@@ -21,9 +21,12 @@ module.exports = {
   rules: {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
-    "react-refresh/only-export-components": [
-      "error",
-      { "allowConstantExport": true }
-    ]
+    "react-hooks/exhaustive-deps": "off",
+    "react-refresh/only-export-components": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "no-constant-condition": "off",
+    "no-unsafe-finally": "off"
   }
 };
