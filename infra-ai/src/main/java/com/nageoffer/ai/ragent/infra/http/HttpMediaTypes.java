@@ -22,15 +22,12 @@ import lombok.NoArgsConstructor;
 import okhttp3.MediaType;
 
 /**
- * HTTP 媒体类型常量类
- * 提供常用的 HTTP Content-Type 媒体类型定义
+ * OkHttp 请求使用的媒体类型常量。
+ * 显式声明 UTF-8，确保中文提示词和检索文本按一致编码发送到模型供应商。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class HttpMediaTypes {
 
-    /**
-     * JSON 媒体类型，使用 UTF-8 字符集
-     * 用于 OkHttp 请求中的 MediaType 对象
-     */
+    /** 供应商 JSON 请求体的 Content-Type。 */
     public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 }

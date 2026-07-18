@@ -32,26 +32,43 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
 /**
- * 知识库文档定时刷新任务
+ * 知识库 URL 文档的定时扫描与卡死恢复任务。
+ *
+ * <p>本组件只负责发现到期任务、抢调度租约并投递给工作线程，以及恢复异常卡在 RUNNING 的文档；
+ * 真正的下载、变更检测、重建与状态写回交由 ScheduleRefreshProcessor，避免调度线程被长任务占住。</p>
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class KnowledgeDocumentScheduleJob {
 
+    /**
+     * 两项职责：扫描到期 URL 文档并在抢锁成功后投递刷新任务；恢复进程崩溃或线程中断导致的 RUNNING 文档。
+     * 具体刷新编排全部位于 ScheduleRefreshProcessor，保证扫描器保持轻量。
+     */
+
+    /** 查询到期、启用且未被锁定的调度记录。 */
     private final KnowledgeDocumentScheduleMapper scheduleMapper;
+    /** 专用分块线程池，隔离调度扫描线程和耗时的文件/模型操作。 */
     private final Executor knowledgeChunkExecutor;
+    /** 扫描间隔、批次大小和超时恢复阈值配置。 */
     private final KnowledgeScheduleProperties scheduleProperties;
+    /** 多实例竞争同一调度任务时使用的数据库租约锁。 */
     private final ScheduleLockManager lockManager;
+    /** 实际执行远程刷新与重建的编排器。 */
     private final ScheduleRefreshProcessor scheduleRefreshProcessor;
+    /** 扫描恢复超时 RUNNING 文档的状态 CAS 辅助组件。 */
     private final DocumentStatusHelper documentStatusHelper;
 
     /**
-     * 恢复长时间卡在 RUNNING 状态的文档（进程崩溃等异常场景）
+     * 定时恢复长时间卡在 RUNNING 状态的文档（进程崩溃、线程中断等异常场景）。
      * 超过配置阈值未完成的 RUNNING 文档重置为 FAILED，允许用户手动重试
+     * 首次启动延迟 30 秒，之后每次执行结束延迟 60 秒再运行，避免应用刚启动时与初始化任务争抢资源。
      */
+    // fixedDelay 以“上一次结束”为起点，避免恢复扫描自身并发重叠。
     @Scheduled(fixedDelay = 60_000, initialDelay = 30_000)
     public void recoverStuckRunningDocuments() {
+        // 崩溃恢复：进程在置 RUNNING 后死亡时，超时将文档重置为 FAILED，允许用户手动重试。
         long timeoutMinutes = scheduleProperties.getRunningTimeoutMinutes();
         int recovered = documentStatusHelper.recoverStuckRunning(timeoutMinutes);
         if (recovered > 0) {
@@ -61,7 +78,7 @@ public class KnowledgeDocumentScheduleJob {
     }
 
     /**
-     ***第一件事：扫描到期任务**
+     * 扫描到期任务并异步提交刷新。
      *
      * 每隔一段时间（默认 10 秒）执行一次，查询满足条件的任务：
      *
@@ -71,14 +88,12 @@ public class KnowledgeDocumentScheduleJob {
      *
      * 找到任务后，不是直接执行，而是先尝试获取锁。抢锁成功的实例才能执行，抢锁失败的实例直接跳过。
      *
-     * **第二件事：恢复卡住的文档**
-     *
-     * 每分钟扫描一次，把卡在 `RUNNING` 状态超过阈值（默认 30 分钟）的文档重置为 `FAILED`。这是进程崩溃后的兜底恢复机制。
-     *
-     * 这个组件的设计思路是：负责找到该跑的任务和兜底恢复异常状态，不负责具体的刷新逻辑。
+     * 调度器不直接下载文件或调用模型：它只发现工作、获得租约、投递线程池。复杂刷新过程独立到编排器，
+     * 使扫描循环在集群和高负载下仍能持续运行。
      */
     @Scheduled(fixedDelayString = "${rag.knowledge.schedule.scan-delay-ms:10000}")
     public void scan() {
+        // 只扫描启用、到期且锁为空/已过期的任务，减少无效抢锁 SQL。
         Date now = new Date();
         List<KnowledgeDocumentScheduleDO> schedules = scheduleMapper.selectList(
                 new LambdaQueryWrapper<KnowledgeDocumentScheduleDO>()
@@ -101,13 +116,13 @@ public class KnowledgeDocumentScheduleJob {
             if (schedule == null || schedule.getId() == null) {
                 continue;
             }
-            // 尝试获取锁，返回 lease 或 null
+            // 尝试获取数据库租约；集群中只有条件更新成功的实例可以继续。
             ScheduleLockLease lease = lockManager.tryAcquire(schedule.getId(), now);
             if (lease == null) {
                 continue;
             }
             try {
-                // 抢占锁后就丢到线程池异步执行
+                // 抢锁成功后投递专用线程池，让调度线程立刻继续扫描下一批。
                 knowledgeChunkExecutor.execute(() -> scheduleRefreshProcessor.process(lease));
             } catch (RejectedExecutionException e) {
                 log.error("定时任务提交失败: scheduleId={}, docId={}, kbId={}",

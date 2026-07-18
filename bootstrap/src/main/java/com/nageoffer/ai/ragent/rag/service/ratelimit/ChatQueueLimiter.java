@@ -77,17 +77,19 @@ public class ChatQueueLimiter {
      * onAcquire 只有拿到分布式 permit 后才会执行，因此业务主链路天然受全局坑位控制。</p>
      */
     public void enqueue(String question, String conversationId, SseEmitter emitter, Runnable onAcquire) {
-        if (!Boolean.TRUE.equals(rateLimitProperties.getGlobalEnabled())) {
+        if (!Boolean.TRUE.equals(rateLimitProperties.getGlobalEnabled())) { // 如果没有采用全局限流，就直接执行了
             try {
                 // 限流关闭时仍然不在当前线程跑业务，保持 Tomcat/SSE 入口线程快速返回。
-                chatEntryExecutor.execute(onAcquire);
+                // 如果没有限流就直接线程执行Runnable任务，该任务没有返回值的
+                chatEntryExecutor.execute(onAcquire); // 放到线程里面执行
             } catch (RejectedExecutionException ex) {
+                // execute执行异常了，那么就跑出一场，sse也需要发送reject事件请求
                 log.warn("直通分支线程池拒绝任务，转 reject 流程", ex);
                 handleReject(question, conversationId, emitter);
             }
             return;
         }
-
+        // 如果开启了全局限流，那么就需要进入限流入口
         chatRateLimiter.acquire(AcquireRequest.builder()
                 .maxWaitMillis(TimeUnit.SECONDS.toMillis(rateLimitProperties.getGlobalMaxWaitSeconds()))
                 .onAcquired(onAcquire)

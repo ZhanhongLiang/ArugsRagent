@@ -140,6 +140,8 @@ public abstract class AbstractOpenAIStyleChatClient implements ChatClient {
      * 发送请求 -> 处理 HTTP 错误 -> 解析 JSON -> 提取 content。子类不重写这条主流程，只通过钩子表达差异。</p>
      */
     protected String doChat(ChatRequest request, ModelTarget target) {
+        // Template method: subclasses supply provider identity and hooks; this base class owns
+        // request construction, HTTP execution, response parsing and error normalization.
         // 1. 校验供应商配置：ModelTarget 必须携带 ProviderConfig，否则无法拿到 URL/API Key。
         AIModelProperties.ProviderConfig provider = HttpResponseHelper.requireProvider(target, provider());
 
@@ -186,11 +188,13 @@ public abstract class AbstractOpenAIStyleChatClient implements ChatClient {
 
     /**
      * 流式 Chat 模板方法。
-     *
+     *  callback就是传入的bridge, 首包探针
      * <p>第 55 篇只点到这里，后续 SSE 文章会展开。它和 doChat 共用请求体构建、URL 解析、认证逻辑，
      * 但请求体会加 stream=true，并把阻塞式响应读取提交到 modelStreamExecutor。</p>
      */
     protected StreamCancellationHandle doStreamChat(ChatRequest request, StreamCallback callback, ModelTarget target) {
+        // Streaming template method: construct OpenAI-compatible body with stream=true,
+        // then read the provider SSE response in a dedicated executor thread.
         // 流式调用同样先校验 provider 和 API Key。
         AIModelProperties.ProviderConfig provider = HttpResponseHelper.requireProvider(target, provider());
         if (requiresApiKey()) {
@@ -204,18 +208,30 @@ public abstract class AbstractOpenAIStyleChatClient implements ChatClient {
                 .addHeader("Accept", "text/event-stream")
                 .build();
 
+        // OkHttp Call is kept as the cancellation target; stop-generation eventually cancels this call.
+        // 在OkHttpClient里面，需要把请求封装成Call对象
         Call call = streamingHttpClient.newCall(streamRequest);
         boolean reasoningEnabled = isReasoningEnabledForStream(request);
 
         // 在调用线程开启 stream span，使后续 first-packet 子节点能正确归属父节点；
         // 该 span 由 SSE 终态或 cancel 收尾，记录真实端到端耗时。
+        // 手动创建一个trace节点，用来记录LLM整个过程的耗时
         StreamSpan span = streamTraceSupport.beginStreamNode(provider() + "-stream-chat", "LLM_PROVIDER");
         StreamSpanCallback wrappedCallback;
         try {
             // 包装 callback，让 complete/error/cancel 能同步结束 trace span。
+            // StreamSpanCallback继承了ForwardingStreamCallback
+            // 把trace检测节点和callback(bridge桥梁)封装成StreamSpanCallback
             wrappedCallback = new StreamSpanCallback(callback, span);
 
             // 把阻塞式 SSE 读取提交到专用线程池；返回的句柄用于取消 OkHttp Call 和后台任务。
+            /**
+             * StreamAsyncExecutor 的作用是：把阻塞式的模型 SSE 读取任务，提交到专门的模型流线程池里异步执行，并返回一个可以取消的句柄。
+             * 它解决的是这个问题：
+             * OkHttp 读取模型 SSE 是阻塞的。
+             * 如果直接在当前线程里读，会卡住当前业务线程。
+             * 所以要丢到 modelStreamExecutor 线程池里读。
+             */
             StreamCancellationHandle inner = StreamAsyncExecutor.submit(
                     modelStreamExecutor,
                     call,
@@ -237,11 +253,12 @@ public abstract class AbstractOpenAIStyleChatClient implements ChatClient {
 
     /**
      * 后台线程中的 SSE 读取主循环。
-     *
+     * 这里的callback传入的是wrappedCallback, 里面包括了bridge和trace节点
      * <p>谁读流，谁触发回调：modelStreamExecutor 中的线程阻塞读取 OkHttp 响应行，解析出 token 后
      * 直接调用 callback.onContent/onThinking，最终一路推到 SseEmitter。这里没有额外消息队列。</p>
      */
     private void doStream(Call call, StreamCallback callback, AtomicBoolean cancelled, boolean reasoningEnabled) {
+        // Runs in modelStreamExecutor. It blocks on provider SSE and forwards parsed deltas upward.
         try (Response response = call.execute()) {
             // HTTP 非成功状态同样转换成 ModelClientException，让上层首包探测感知失败。
             if (!response.isSuccessful()) {
@@ -259,6 +276,7 @@ public abstract class AbstractOpenAIStyleChatClient implements ChatClient {
 
             BufferedSource source = body.source();
             boolean completed = false;
+
             while (!cancelled.get()) {
                 // OpenAI 兼容 SSE 是按行读取，核心数据通常在 data: 前缀行里。
                 String line = source.readUtf8Line();
@@ -271,13 +289,17 @@ public abstract class AbstractOpenAIStyleChatClient implements ChatClient {
                 try {
                     // 解析 data 行，提取 delta.content、delta.reasoning_content 或 [DONE]。
                     OpenAIStyleSseParser.ParsedEvent event = OpenAIStyleSseParser.parseLine(line, gson, reasoningEnabled);
+                    // 这里就是利用callback进行首包
                     if (event.hasReasoning()) {
+                        // 这个调用了ForwardingSteamCallback里面的onThinking，ForwardingSteamCallback调用了PorbeStreamBridge
                         callback.onThinking(event.reasoning());
                     }
                     if (event.hasContent()) {
+                        // 这个调用了ForwardingSteamCallback里面的onThinking，ForwardingSteamCallback调用了PorbeStreamBridge
                         callback.onContent(event.content());
                     }
                     if (event.completed()) {
+                        // 这个调用了ForwardingSteamCallback里面的onThinking，ForwardingSteamCallback调用了PorbeStreamBridge
                         callback.onComplete();
                         completed = true;
                         break;
@@ -311,6 +333,7 @@ public abstract class AbstractOpenAIStyleChatClient implements ChatClient {
      * <p>ChatRequest 是项目内部统一对象；这里把它映射成供应商 HTTP API 接收的 JSON。</p>
      */
     protected JsonObject buildRequestBody(ChatRequest request, ModelTarget target, boolean stream) {
+        // Internal ChatRequest is provider-neutral; this method converts it to OpenAI Chat Completions JSON.
         JsonObject body = new JsonObject();
 
         // model 来自 YAML candidate.model，而不是 ChatRequest。

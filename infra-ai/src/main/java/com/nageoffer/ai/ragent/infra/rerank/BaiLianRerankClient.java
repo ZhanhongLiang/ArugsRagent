@@ -57,6 +57,11 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class BaiLianRerankClient implements RerankClient {
 
+    /**
+     * Rerank 在 RAG 中位于粗召回之后：向量/BM25 给出较宽候选集，精排模型对 query-chunk 对进行统一尺度评分。
+     * 它应改善顺序，但不能让整个问答因精排失败而不可用，因此错误会转换为 ModelClientException 交给路由层降级。
+     */
+
     @Qualifier("syncHttpClient")
     // Rerank 是同步 HTTP 调用，失败会抛 ModelClientException 给路由执行器触发 fallback。
     private final OkHttpClient httpClient;
@@ -75,7 +80,7 @@ public class BaiLianRerankClient implements RerankClient {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
-
+        // 这里再来一层兜底，防止一个chunk在三个检索通道同时出现
         // 混合检索可能让同一个 Chunk 同时被向量和 BM25 命中，这里按 id 精确去重，避免浪费 Rerank token。
         List<RetrievedChunk> dedup = new ArrayList<>(candidates.size());
         Set<String> seen = new HashSet<>();
@@ -89,7 +94,7 @@ public class BaiLianRerankClient implements RerankClient {
             // 候选数量不超过目标数量时，精排不会减少结果，直接返回去重后的候选。
             return dedup;
         }
-
+        // 调用
         return doRerank(query, dedup, topN, target);
     }
 
@@ -108,6 +113,10 @@ public class BaiLianRerankClient implements RerankClient {
      * 不会因为 API 少返回了几条就让下游拿到不够数的结果。
      */
     private List<RetrievedChunk> doRerank(String query, List<RetrievedChunk> candidates, int topN, ModelTarget target) {
+        /*
+         * 索引映射规则：供应商返回的是提交 documents 数组中的下标，不能把返回文档文本当作事实来源。
+         * 必须按下标映射回原始 RetrievedChunk，才能保持 id、文本及其他元数据的一致性。
+         */
         // 1. 校验 provider 配置，百炼 Rerank 需要 URL 和 API Key。
         AIModelProperties.ProviderConfig provider = HttpResponseHelper.requireProvider(target, provider());
 

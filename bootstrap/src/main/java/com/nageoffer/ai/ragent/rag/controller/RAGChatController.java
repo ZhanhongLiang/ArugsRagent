@@ -42,23 +42,17 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class RAGChatController {
 
-    // RAG 问答应用服务，真正执行排队、流水线和流式生成。
+    /** RAG 问答应用服务，真正执行排队、流水线和流式生成。 */
     private final RAGChatService ragChatService;
-    // 默认配置，主要用于 SSE 超时时间。
+    /** 默认配置，主要用于 SSE 超时时间。 */
     private final RAGDefaultProperties ragDefaultProperties;
 
 
     /**
-     * 发起 SSE 流式对话, Controller 层的 `chat()` 方法上标注了 `@IdempotentSubmit` 注解，
-     * 基于用户 ID 加分布式锁。用户快速连点两次发送按钮，第二次请求会被直接拦截，返回“当前会话处理中，请稍后再发起新的对话”。
+     * 建立 SSE 对话连接并立即交给异步业务链路处理。
      *
-     * - `produces = "text/event-stream;charset=UTF-8"` 告诉 Spring 这是一个 SSE 端点，
-     * 响应头会自动带上 `Content-Type: text/event-stream`
-     * - `SseEmitter` 的超时时间从配置读取，SSE 系列讲过它的核心 API，这里不再展开
-     * - `@IdempotentSubmit` 注解做了幂等保护——同一用户不能同时发起多个对话
-     *
-     * Controller 方法的线程模型很关键：创建 `SseEmitter` → 交给 Service 处理 → 立即返回。
-     * Tomcat 线程在这里就释放了，不会被长时间占用。后续的流式推送发生在别的线程上，这个后面会详细讲。
+     * <p>{@link IdempotentSubmit} 以当前用户作为幂等键，防止连续点击发送创建多个并发流。
+     * 方法只创建并返回 {@link SseEmitter}，Tomcat 处理线程随即释放；后续 token 由服务线程写入同一个 emitter。</p>
      */
     @IdempotentSubmit(
             key = "T(com.nageoffer.ai.ragent.framework.context.UserContext).getUserId()",
@@ -81,7 +75,7 @@ public class RAGChatController {
     @IdempotentSubmit
     @PostMapping(value = "/rag/v3/stop")
     public Result<Void> stop(@RequestParam String taskId) {
-        // 根据 taskId 找到对应 StreamCancellationHandle 并取消。
+        // 根据 taskId 找到并取消底层流句柄；幂等注解允许前端重试停止操作。
         ragChatService.stopTask(taskId);
         return Results.success();
     }

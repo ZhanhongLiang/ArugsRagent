@@ -36,12 +36,19 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+/**
+ * 软件销售数据的离线模拟 MCP 工具。
+ *
+ * <p>按查询周期生成确定性演示订单，支持汇总、排名、明细和趋势四种视图，用于验证 MCP 工具发现与参数提取链路。</p>
+ */
 @Slf4j
 @Component
 public class SalesMcpExecutor {
 
+    /** MCP 协议中的工具唯一标识。 */
     private static final String TOOL_ID = "sales_query";
 
+    /** 模拟销售数据的地区、产品、销售人员和客户候选池。 */
     private static final List<String> REGIONS = List.of("华东", "华南", "华北", "西南", "西北");
     private static final List<String> PRODUCTS = List.of("企业版", "专业版", "基础版");
     private static final Map<String, List<String>> SALES_BY_REGION = Map.of(
@@ -58,15 +65,18 @@ public class SalesMcpExecutor {
             "三一重工", "中联重科", "格力电器", "美的集团", "海尔智家"
     );
 
+    /** 当前周期的模拟数据缓存与缓存键，避免一次会话中的多次筛选产生不同基础数据。 */
     private List<SalesRecord> cachedData;
     private String cacheKey;
 
+    /** 注册销售查询工具及其同步处理器。 */
     @Bean
     public McpServerFeatures.SyncToolSpecification salesToolSpecification() {
         return new McpServerFeatures.SyncToolSpecification(buildTool(),
                 (exchange, request) -> handleCall(request));
     }
 
+    /** 构建销售查询的输入 Schema，让模型能提取筛选字段和查询视图。 */
     private Tool buildTool() {
         Map<String, Object> properties = new LinkedHashMap<>();
 
@@ -106,7 +116,7 @@ public class SalesMcpExecutor {
                 "description", "返回记录数限制，默认10",
                 "default", 10
         ));
-
+        // 全部筛选参数可选；未提供时按全国、本月、汇总查询。
         JsonSchema inputSchema = new JsonSchema(
                 "object", properties, List.of(), null, null, null);
 
@@ -117,9 +127,11 @@ public class SalesMcpExecutor {
                 .build();
     }
 
+    /** 解析请求参数，取得对应周期的模拟数据，筛选后格式化为指定结果视图。 */
     private CallToolResult handleCall(CallToolRequest request) {
         long startMs = System.currentTimeMillis();
         try {
+            // SDK 允许 arguments 为 null，统一为空 Map 避免空指针。
             Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
             String region = stringArg(args, "region");
             String period = stringArg(args, "period");
@@ -128,13 +140,16 @@ public class SalesMcpExecutor {
             String queryType = stringArg(args, "queryType");
             Integer limit = intArg(args, "limit");
 
+            // 对可选参数应用工具 Schema 定义的默认值。
             if (period == null || period.isBlank()) period = "本月";
             if (queryType == null || queryType.isBlank()) queryType = "summary";
             if (limit == null || limit <= 0) limit = 10;
 
+            // 基础数据按周期缓存，筛选只在内存中生成不可变视图。
             List<SalesRecord> allData = getOrGenerateData(period);
             List<SalesRecord> filtered = filterData(allData, region, product, salesPerson);
 
+            // 选择汇总、销售排名、大额明细或周维度趋势。
             String result = switch (queryType) {
                 case "ranking" -> buildRankingResult(filtered, region, period, limit);
                 case "detail" -> buildDetailResult(filtered, region, period, limit);
@@ -152,8 +167,10 @@ public class SalesMcpExecutor {
         }
     }
 
+    /** 汇总总销售额、订单数、客单价，并在未筛选时展示产品和地区分布。 */
     private String buildSummaryResult(List<SalesRecord> data, String region, String period,
                                       String product, String salesPerson) {
+        // 先计算总体指标，后续分布百分比以总销售额为分母。
         double totalAmount = data.stream().mapToDouble(r -> r.amount).sum();
         int orderCount = data.size();
         double avgAmount = orderCount > 0 ? totalAmount / orderCount : 0;
@@ -172,6 +189,7 @@ public class SalesMcpExecutor {
         sb.append(String.format("总销售额: ¥%.2f 万\n", totalAmount));
         sb.append(String.format("成交订单: %d 笔\n", orderCount));
         sb.append(String.format("平均单价: ¥%.2f 万\n", avgAmount));
+        // 指定产品时不再重复展示产品分布，避免回答冗余。
         if (product == null && !byProduct.isEmpty()) {
             sb.append("\n【按产品分布】\n");
             byProduct.entrySet().stream().sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
@@ -185,6 +203,7 @@ public class SalesMcpExecutor {
         return sb.toString().trim();
     }
 
+    /** 以销售额聚合销售人员并按降序输出前 N 名。 */
     private String buildRankingResult(List<SalesRecord> data, String region, String period, int limit) {
         Map<String, Double> bySales = data.stream()
                 .collect(Collectors.groupingBy(r -> r.salesPerson, Collectors.summingDouble(r -> r.amount)));
@@ -205,6 +224,7 @@ public class SalesMcpExecutor {
         return sb.toString().trim();
     }
 
+    /** 将订单按金额降序排列，仅返回前 N 条，控制工具返回文本长度。 */
     private String buildDetailResult(List<SalesRecord> data, String region, String period, int limit) {
         List<SalesRecord> topRecords = data.stream().sorted((a, b) -> Double.compare(b.amount, a.amount)).limit(limit).toList();
         StringBuilder sb = new StringBuilder();
@@ -221,6 +241,7 @@ public class SalesMcpExecutor {
         return sb.toString().trim();
     }
 
+    /** 按日期所在周聚合销售额，生成适合模型阅读的周趋势。 */
     private String buildTrendResult(List<SalesRecord> data, String region, String period) {
         Map<String, Double> byWeek = data.stream().collect(Collectors.groupingBy(
                 r -> "第" + ((LocalDate.parse(r.date).getDayOfMonth() - 1) / 7 + 1) + "周",
@@ -238,6 +259,7 @@ public class SalesMcpExecutor {
         return sb.toString().trim();
     }
 
+    /** 对所有非空筛选条件使用 AND 语义进行精确过滤。 */
     private List<SalesRecord> filterData(List<SalesRecord> data, String region, String product, String salesPerson) {
         return data.stream()
                 .filter(r -> region == null || region.equals(r.region))
@@ -246,6 +268,7 @@ public class SalesMcpExecutor {
                 .toList();
     }
 
+    /** 同一周期与当天复用缓存，不同周期则重新按照对应日期范围生成。 */
     private List<SalesRecord> getOrGenerateData(String period) {
         String key = period + "_" + LocalDate.now();
         if (cachedData != null && key.equals(cacheKey)) return cachedData;
@@ -255,6 +278,7 @@ public class SalesMcpExecutor {
         return cachedData;
     }
 
+    /** 将中文周期参数解析为闭区间的开始日期和结束日期。 */
     private LocalDate[] getDateRange(String period) {
         LocalDate now = LocalDate.now();
         return switch (period) {
@@ -274,10 +298,15 @@ public class SalesMcpExecutor {
         };
     }
 
+    /**
+     * 按工作日生成 3 到 8 笔模拟订单。
+     * 起始日期作为随机种子，保证相同时间范围总能复现相同的销售数据。
+     */
     private List<SalesRecord> generateMockData(LocalDate start, LocalDate end) {
         List<SalesRecord> records = new ArrayList<>();
         Random random = new Random(start.toEpochDay());
         long days = end.toEpochDay() - start.toEpochDay() + 1;
+        // 企业销售数据仅在工作日生成，避免周末被随机样本干扰趋势。
         for (long d = 0; d < days; d++) {
             LocalDate date = start.plusDays(d);
             if (date.getDayOfWeek().getValue() > 5) continue;
@@ -288,6 +317,7 @@ public class SalesMcpExecutor {
                 record.salesPerson = SALES_BY_REGION.get(record.region).get(random.nextInt(3));
                 record.product = PRODUCTS.get(random.nextInt(PRODUCTS.size()));
                 record.customer = CUSTOMER_POOL.get(random.nextInt(CUSTOMER_POOL.size())) + date.getDayOfMonth();
+                // 不同产品层级具有明显不同客单价，使汇总和排名结果更具可解释性。
                 record.amount = switch (record.product) {
                     case "企业版" -> 50 + random.nextDouble() * 150;
                     case "专业版" -> 10 + random.nextDouble() * 40;
@@ -301,17 +331,20 @@ public class SalesMcpExecutor {
         return records;
     }
 
+    /** 从 MCP 动态参数读取字符串；缺失时交由上层默认值处理。 */
     private static String stringArg(Map<String, Object> args, String key) {
         Object val = args.get(key);
         return val != null ? val.toString() : null;
     }
 
+    /** 从 MCP 动态参数读取整数，仅接受 JSON 数字类型。 */
     private static Integer intArg(Map<String, Object> args, String key) {
         Object val = args.get(key);
         if (val instanceof Number n) return n.intValue();
         return null;
     }
 
+    /** 构造成功的 MCP 文本结果。 */
     private static CallToolResult successResult(String text) {
         return CallToolResult.builder()
                 .content(List.of(new TextContent(text)))
@@ -319,6 +352,7 @@ public class SalesMcpExecutor {
                 .build();
     }
 
+    /** 构造 isError=true 的 MCP 结果，使调用端可识别失败而不是普通文本。 */
     private static CallToolResult errorResult(String message) {
         return CallToolResult.builder()
                 .content(List.of(new TextContent(message)))
@@ -326,6 +360,7 @@ public class SalesMcpExecutor {
                 .build();
     }
 
+    /** 销售订单模拟数据的内部载体，不直接暴露给 MCP 客户端。 */
     private static class SalesRecord {
         String region;
         String salesPerson;

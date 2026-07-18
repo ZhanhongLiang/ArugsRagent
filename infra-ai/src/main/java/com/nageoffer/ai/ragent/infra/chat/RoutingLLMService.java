@@ -63,11 +63,17 @@ public class RoutingLLMService implements LLMService {
      * 流式调用等待首包的最长时间。同步调用不需要这个探测逻辑。
      */
     private static final int FIRST_PACKET_TIMEOUT_SECONDS = 60;
+    /** 当前路由线程等待首包时被中断的错误信息。 */
     private static final String STREAM_INTERRUPTED_MESSAGE = "流式请求被中断";
+    /** 选择器未返回任何可尝试模型时的错误信息。 */
     private static final String STREAM_NO_PROVIDER_MESSAGE = "无可用大模型提供者";
+    /** 供应商客户端未能成功创建流式任务时的错误信息。 */
     private static final String STREAM_START_FAILED_MESSAGE = "流式请求启动失败";
+    /** 在首包等待窗口内没有收到有效事件时的错误信息。 */
     private static final String STREAM_TIMEOUT_MESSAGE = "流式首包超时";
+    /** 流正常结束但没有内容或思考增量时的错误信息。 */
     private static final String STREAM_NO_CONTENT_MESSAGE = "流式请求未返回内容";
+    /** 所有候选模型均不可用时返回给上层的统一错误信息。 */
     private static final String STREAM_ALL_FAILED_MESSAGE = "大模型调用失败，请稍后再试...";
 
     /**
@@ -105,6 +111,7 @@ public class RoutingLLMService implements LLMService {
             ModelRoutingExecutor executor,
             LlmFirstPacketProbe firstPacketProbe,
             List<ChatClient> clients) {
+        // 保存模型路由、熔断、回退和首包 Trace 所需的协作组件。
         this.selector = selector;
         this.healthStore = healthStore;
         this.executor = executor;
@@ -124,6 +131,7 @@ public class RoutingLLMService implements LLMService {
     @Override
     @RagTraceNode(name = "llm-chat-routing", type = "LLM_ROUTING")
     public String chat(ChatRequest request) {
+        // 同步场景把选择、健康检查和失败回退全部委托给通用执行器。
         return executor.executeWithFallback(
                 // 告诉执行器当前能力是 Chat，用于日志和错误消息展示。
                 ModelCapability.CHAT,
@@ -170,6 +178,8 @@ public class RoutingLLMService implements LLMService {
     @Override
     @RagTraceNode(name = "llm-stream-routing", type = "LLM_ROUTING")
     public StreamCancellationHandle streamChat(ChatRequest request, StreamCallback callback) {
+        // 流式方法很快返回句柄，真正异常发生在后台读 SSE 时，不能直接复用同步回退执行器。
+        // 首包探测将异步回调的结果转换为当前路由线程可判断的成功/失败信号。
         // 选择 Chat 候选列表；ModelSelector 已做过选择阶段的熔断预过滤。
         List<ModelTarget> targets = selector.selectChatCandidates(Boolean.TRUE.equals(request.getThinking()));
         if (CollUtil.isEmpty(targets)) {
@@ -187,16 +197,44 @@ public class RoutingLLMService implements LLMService {
             }
 
             // 调用阶段的最终熔断检查，可能把 OPEN 冷却到期的模型推进到 HALF_OPEN。
+            // 检查模型的是否健康程度，键康检测放行！！
             if (!healthStore.allowCall(target.id())) {
                 continue;
             }
 
-            // ProbeStreamBridge 会先截获首包/错误/完成事件，用于判断该模型是否真的可用。
+            // ProbeStreamBridge 会先截获首包、错误或完成事件，用于判断该模型是否真的可用。
             ProbeStreamBridge bridge = new ProbeStreamBridge(callback);
-
+            // 这个是取消句柄
+            // 句柄同时用于候选失败后取消旧请求，以及用户点击停止生成时打断底层读取。
             StreamCancellationHandle handle;
             try {
                 // 启动具体供应商的流式调用，通常会提交后台线程读取 SSE。
+                // 这个直接通用调用AbstractOpenAIStyleChatClient，AbstractOpenAIStyleChatClient实现了ChatClient接口
+                // 该ChatClient接口也是自定义的
+                // request是已经封装好的各类上下文
+                // client调用了异步线程用来处理，
+                /**
+                 * awaitFirstPacket(bridge, handle, callback) 的作用是：等待当前模型流式请求的“第一个有效信号”，用来判断这个模型到底能不能用。
+                 * 它等的不是完整回答，而是等下面几种情况之一：
+                 * 1. 收到第一个 content      -> SUCCESS
+                 * 2. 收到第一个 thinking     -> SUCCESS
+                 * 3. 收到 error             -> ERROR
+                 * 4. 正常结束但没内容        -> NO_CONTENT
+                 * 5. 超过 60 秒没任何首包    -> TIMEOUT
+                 * 为什么要等首包？
+                 * 因为流式调用不是普通同步调用。
+                 * 这句：
+                 * handle = client.streamChat(request, bridge, target);
+                 * 只是说明：
+                 * 流式请求启动了
+                 * 但不代表模型真的可用。
+                 * 可能会出现：
+                 * 1. HTTP 连接成功，但模型一直不吐 token
+                 * 2. 模型服务内部报错
+                 * 3. 返回空流，直接结束
+                 * 4. API Key 有问题，错误在后台读流线程里才暴露
+                 */
+                // bridge 作为 StreamCallback 传入供应商客户端，先缓存首包前的流事件。
                 handle = client.streamChat(request, bridge, target);
             } catch (Exception e) {
                 // 启动阶段直接失败，标记模型失败并尝试下一个候选。
@@ -216,6 +254,32 @@ public class RoutingLLMService implements LLMService {
             }
 
             // 等待首包、错误、完成或超时，用真实输出结果判断该模型是否可用。
+            // bridge 是缓冲区，避免尚未确认可用的模型先把内容推送给前端。
+            /**
+             * 它本身不直接操作 SseEmitter，但它“利用 SSE”的方式是：接收模型供应商返回的 SSE token 回调，然后决定这些 token 要不要转发给真正的前端 SSE callback。
+             * 正常链路是：
+             * 模型供应商 SSE
+             *   -> AbstractOpenAIStyleChatClient.doStream()
+             *   -> callback.onContent(...)
+             *   -> StreamChatEventHandler
+             *   -> SseEmitter.send()
+             *   -> 浏览器
+             * 加了 ProbeStreamBridge 后变成：
+             * 模型供应商 SSE
+             *   -> AbstractOpenAIStyleChatClient.doStream()
+             *   -> bridge.onContent(...)
+             *   -> 先缓存，不立刻给前端
+             *   -> 首包探测成功
+             *   -> bridge.commit()
+             *   -> downstream.onContent(...)
+             *   -> StreamChatEventHandler
+             *   -> SseEmitter.send()
+             *   -> 浏览器
+             * 这里的 downstream 就是真正会推 SSE 给前端的 callback：
+             * private final StreamCallback downstream;
+             * 也就是外面传进来的：
+             */
+            // 这里需要阻塞等待doStream的probe信息
             ProbeStreamBridge.ProbeResult result = awaitFirstPacket(bridge, handle, callback);
 
             if (result.isSuccess()) {
@@ -239,6 +303,7 @@ public class RoutingLLMService implements LLMService {
      * 根据目标模型的 provider 找到对应 ChatClient。
      */
     private ChatClient resolveClient(ModelTarget target, String label) {
+        // provider 名称必须与 ChatClient.provider() 和 YAML candidate.provider 保持一致。
         ChatClient client = clientsByProvider.get(target.candidate().getProvider());
         if (client == null) {
             log.warn("{} 提供商客户端缺失: provider：{}，modelId：{}",
@@ -254,6 +319,7 @@ public class RoutingLLMService implements LLMService {
                                                            StreamCancellationHandle handle,
                                                            StreamCallback callback) {
         try {
+            // 在独立 Bean 中等待，以便 RagTraceAspect 记录首包耗时节点。
             return firstPacketProbe.awaitFirstPacket(bridge, FIRST_PACKET_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             // 当前线程被中断时，要恢复中断标记、取消供应商请求，并把错误通知给业务回调。
@@ -269,6 +335,7 @@ public class RoutingLLMService implements LLMService {
      * 把首包探测失败结果转换成 lastError，并记录可排查的供应商日志。
      */
     private Throwable buildLastErrorAndLog(ProbeStreamBridge.ProbeResult result, ModelTarget target, String label) {
+        // 将桥接器的协议级终态转换为统一远程异常，并保留模型与提供方诊断信息。
         switch (result.getType()) {
             case ERROR -> {
                 Throwable error = result.getError() != null
@@ -303,6 +370,7 @@ public class RoutingLLMService implements LLMService {
      * 所有候选模型都失败后的统一收尾。
      */
     private RemoteException notifyAllFailed(StreamCallback callback, Throwable lastError) {
+        // 所有候选均失败时只向业务回调发送一次统一错误，前面的探测残片不会被 bridge 提交。
         RemoteException finalException = new RemoteException(
                 STREAM_ALL_FAILED_MESSAGE,
                 lastError,
@@ -318,6 +386,7 @@ public class RoutingLLMService implements LLMService {
      * <p>如果指定模型已经被熔断预过滤，或不支持当前 deepThinking 模式，这里会抛出不可用异常。</p>
      */
     private ModelTarget resolveTarget(String modelId, boolean deepThinking) {
+        // 指定模型也必须通过当前模式下的候选和熔断过滤，不能绕过健康检查强行调用。
         return selector.selectChatCandidates(deepThinking).stream()
                 .filter(target -> modelId.equals(target.id()))
                 .findFirst()

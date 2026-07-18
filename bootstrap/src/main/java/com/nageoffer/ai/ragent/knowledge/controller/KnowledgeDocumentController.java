@@ -72,6 +72,16 @@ public class KnowledgeDocumentController {
             "txt", "text/plain"
     );
 
+    /*
+     * Debug guide:
+     * 1. upload() only stores the original file and document metadata.
+     * 2. startChunk() changes document status with CAS and sends an MQ task.
+     * 3. The consumer runs parsing, chunking, embedding and vector indexing asynchronously.
+     *
+     * This split is the core idea from the knowledge-base notes: keep upload fast and
+     * move memory-heavy / slow work out of the HTTP request thread.
+     */
+
     /**
      * 上传文档：入库记录 + 文件落盘，返回文档ID
      */

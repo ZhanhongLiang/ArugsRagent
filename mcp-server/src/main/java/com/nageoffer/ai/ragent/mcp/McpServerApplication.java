@@ -27,6 +27,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class McpServerApplication {
 
     public static void main(String[] args) {
+        // 启动独立 MCP Server；它不承载 RAG 主业务，而是向 Bootstrap 暴露可发现的工具。
         SpringApplication.run(McpServerApplication.class, args);
     }
 }

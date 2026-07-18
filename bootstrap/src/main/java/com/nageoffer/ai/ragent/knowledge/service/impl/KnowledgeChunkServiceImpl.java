@@ -66,6 +66,18 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
 
+    /*
+     * Chunk is the editable business-side representation of retrieved knowledge.
+     *
+     * The project deliberately keeps business chunk rows separate from vector rows:
+     * 1. t_knowledge_chunk stores text, order, hash, enabled flag and token count.
+     * 2. The vector store stores embedding and retrieval metadata.
+     * 3. Manual create/update/delete/enable operations must synchronize both sides.
+     *
+     * Debug focus: when a chunk changes, check whether the DB row and the vector index
+     * are updated in the same branch.
+     */
+
     private final KnowledgeChunkMapper chunkMapper;
     private final KnowledgeDocumentMapper documentMapper;
     private final KnowledgeBaseMapper knowledgeBaseMapper;
@@ -92,6 +104,8 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public KnowledgeChunkVO create(String docId, KnowledgeChunkCreateRequest requestParam) {
+        // Manual chunk creation is allowed only when the document is stable and enabled.
+        // After inserting the business row, the same content is embedded and indexed into the vector store.
         // 查询目前的文档是否存在
         KnowledgeDocumentDO documentDO = documentMapper.selectById(docId);
         Assert.notNull(documentDO, () -> new ClientException("文档不存在"));
@@ -161,6 +175,8 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void batchCreate(String docId, List<KnowledgeChunkCreateRequest> requestParams, boolean writeVector) {
+        // Batch creation is used by document chunking. writeVector=false lets the upper document service
+        // perform one atomic "delete old + insert new + index vectors" transaction for the whole document.
         if (CollUtil.isEmpty(requestParams)) {
             return;
         }
@@ -242,6 +258,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(String docId, String chunkId, KnowledgeChunkUpdateRequest requestParam) {
+        // Updating chunk text invalidates its old embedding, so the vector row must be regenerated immediately.
         KnowledgeDocumentDO documentDO = documentMapper.selectById(docId);
         Assert.notNull(documentDO, () -> new ClientException("文档不存在"));
         if (DocumentStatus.RUNNING.getCode().equals(documentDO.getStatus())) {
@@ -288,6 +305,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(String docId, String chunkId) {
+        // Delete must validate chunk ownership to prevent operating on another document's chunk through a forged path.
         KnowledgeDocumentDO documentDO = documentMapper.selectById(docId);
         Assert.notNull(documentDO, () -> new ClientException("文档不存在"));
         if (DocumentStatus.RUNNING.getCode().equals(documentDO.getStatus())) {
@@ -316,6 +334,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void enableChunk(String docId, String chunkId, boolean enabled) {
+        // Enabling a chunk means re-indexing it; disabling means removing only its vector row while keeping text history.
         KnowledgeDocumentDO documentDO = documentMapper.selectById(docId);
         Assert.notNull(documentDO, () -> new ClientException("文档不存在"));
         if (DocumentStatus.RUNNING.getCode().equals(documentDO.getStatus())) {
@@ -487,6 +506,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
      * 将单个 chunk 同步到向量库
      */
     private void syncChunkToVector(String collectionName, String docId, KnowledgeChunkDO chunkDO, String embeddingModel) {
+        // A single chunk vector write follows: embed content -> convert to float[] -> upsert into vector store.
         List<Float> embedding = embedContent(chunkDO.getContent(), embeddingModel);
         float[] vector = toArray(embedding);
 
@@ -521,6 +541,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     }
 
     private void attachEmbeddings(List<VectorChunk> chunks, String embeddingModel) {
+        // Batch embedding result order must match input chunk order; otherwise chunk text and vector will be misaligned.
         if (CollUtil.isEmpty(chunks)) {
             return;
         }

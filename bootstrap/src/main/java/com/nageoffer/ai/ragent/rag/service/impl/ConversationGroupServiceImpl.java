@@ -31,6 +31,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 为记忆服务提供按范围读取会话数据的查询实现。
+ *
+ * <p>该类集中封装“最近用户轮次、某段消息、最近摘要”等查询，
+ * 让记忆压缩可以精确标记已摘要区间，避免反复压缩同一批消息。</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class ConversationGroupServiceImpl implements ConversationGroupService {
@@ -44,6 +50,7 @@ public class ConversationGroupServiceImpl implements ConversationGroupService {
         if (StrUtil.isBlank(conversationId) || StrUtil.isBlank(userId) || limit <= 0) {
             return List.of();
         }
+        // 仅用户消息用于判断对话轮数，助手消息不应把一问一答误算成两轮。
         return messageMapper.selectList(
                 Wrappers.lambdaQuery(ConversationMessageDO.class)
                         .eq(ConversationMessageDO::getConversationId, conversationId)
@@ -60,6 +67,7 @@ public class ConversationGroupServiceImpl implements ConversationGroupService {
         if (StrUtil.isBlank(conversationId) || StrUtil.isBlank(userId)) {
             return List.of();
         }
+        // 边界 ID 对应上一份摘要的终点和本次摘要的终点，区间采用开区间避免重复摘要。
         var query = Wrappers.lambdaQuery(ConversationMessageDO.class)
                 .eq(ConversationMessageDO::getConversationId, conversationId)
                 .eq(ConversationMessageDO::getUserId, userId)
@@ -71,6 +79,7 @@ public class ConversationGroupServiceImpl implements ConversationGroupService {
         if (beforeId != null) {
             query.lt(ConversationMessageDO::getId, beforeId);
         }
+        // 用 ID 升序恢复原始时序，供摘要模型阅读完整对话上下文。
         return messageMapper.selectList(
                 query.orderByAsc(ConversationMessageDO::getId)
         );
@@ -81,6 +90,7 @@ public class ConversationGroupServiceImpl implements ConversationGroupService {
         if (StrUtil.isBlank(conversationId) || StrUtil.isBlank(userId) || at == null) {
             return null;
         }
+        // 通过时间点定位“本次摘要覆盖到哪里”，让异步摘要可稳定建立边界。
         ConversationMessageDO record = messageMapper.selectOne(
                 Wrappers.lambdaQuery(ConversationMessageDO.class)
                         .eq(ConversationMessageDO::getConversationId, conversationId)
@@ -98,6 +108,7 @@ public class ConversationGroupServiceImpl implements ConversationGroupService {
         if (StrUtil.isBlank(conversationId) || StrUtil.isBlank(userId)) {
             return 0;
         }
+        // 只统计 user 角色，与 historyKeepTurns 的“轮”定义保持一致。
         return messageMapper.selectCount(
                 Wrappers.lambdaQuery(ConversationMessageDO.class)
                         .eq(ConversationMessageDO::getConversationId, conversationId)
@@ -112,6 +123,7 @@ public class ConversationGroupServiceImpl implements ConversationGroupService {
         if (StrUtil.isBlank(conversationId) || StrUtil.isBlank(userId)) {
             return null;
         }
+        // 最新摘要带有已覆盖消息边界，是下一次增量摘要的起点。
         return summaryMapper.selectOne(
                 Wrappers.lambdaQuery(ConversationSummaryDO.class)
                         .eq(ConversationSummaryDO::getConversationId, conversationId)
@@ -127,6 +139,7 @@ public class ConversationGroupServiceImpl implements ConversationGroupService {
         if (StrUtil.isBlank(conversationId) || StrUtil.isBlank(userId)) {
             return null;
         }
+        // 统一从这里完成会话归属查询，调用方无需重复拼接条件。
         return conversationMapper.selectOne(
                 Wrappers.lambdaQuery(ConversationDO.class)
                         .eq(ConversationDO::getConversationId, conversationId)

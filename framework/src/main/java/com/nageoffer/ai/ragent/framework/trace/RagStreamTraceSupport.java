@@ -18,7 +18,7 @@
 package com.nageoffer.ai.ragent.framework.trace;
 
 /**
- * 跨线程 stream 节点的 Trace 支持
+ * 跨线程流式节点的 Trace 支持。
  * <p>
  * 解决 @RagTraceNode AOP 在 stream 场景下只测到任务提交（runAsync）的问题：
  * 同步部分（HTTP 提交、首包阻塞）在调用线程执行，真正的 SSE 读循环在线程池
@@ -36,33 +36,26 @@ public interface RagStreamTraceSupport {
      */
     StreamSpan beginStreamNode(String name, String type);
 
+    /**
+     * 对一个跨线程节点的控制句柄。
+     * detach 与 finish 是两阶段操作：前者结束提交线程的父子关系，后者在 SSE 工作线程结束真实耗时。
+     */
     interface StreamSpan {
 
-        /**
-         * 调用线程同步部分结束时调用，把 nodeId 从 NODE_STACK 弹出
-         * 不会 finish 节点
-         */
+        /** 调用线程同步部分结束时弹出 nodeId；只解除栈关联，不会结束节点。 */
         void detach();
 
-        /**
-         * 异步线程上：onComplete 时调用，CAS 保证幂等
-         */
+        /** 异步线程的 onComplete 中调用；CAS 保证重复回调只能成功结束一次。 */
         void finishSuccess();
 
-        /**
-         * 异步线程上：onError 时调用，CAS 保证幂等
-         */
+        /** 异步线程的 onError 中调用；CAS 保证重复错误信号只记录一次。 */
         void finishError(Throwable error);
 
-        /**
-         * cancel 路径：如节点尚未 finish，则按取消语义收尾，避免 RUNNING 悬挂
-         */
+        /** 取消路径使用；节点尚未结束时按取消语义收尾，避免 RUNNING 状态永久悬挂。 */
         void finishCancelledIfRunning();
     }
 
-    /**
-     * 不开启 trace 时使用的空实现，所有方法 no-op
-     */
+    /** 未启用 Trace 时使用的空对象，调用方不需要在每个流式回调前做 null 判断。 */
     StreamSpan NOOP_SPAN = new StreamSpan() {
         @Override public void detach() {}
         @Override public void finishSuccess() {}

@@ -34,6 +34,10 @@ import java.util.stream.Collectors;
 @Service
 public class NoopRerankClient implements RerankClient {
 
+    /**
+     * 空对象降级：它故意不做任何模型计算，只保留召回顺序并截断到 topN。
+     * 当真实 Cross-Encoder 未配置、被限流或暂时不健康时，RAG 流水线仍可继续运行。
+     */
     @Override
     /**
      * 返回特殊 provider=noop。ModelSelector 对 noop 允许没有 ProviderConfig，因为它不需要 URL/API Key。
@@ -49,7 +53,7 @@ public class NoopRerankClient implements RerankClient {
      * @param candidates 待排序的候选文档片段列表
      * @param topN       返回前N个最相关的结果
      * @param target     目标模型配置信息
-     * @return
+     * @return 保持原始召回顺序的前 topN 条候选
      */
     @Override
     public List<RetrievedChunk> rerank(String query, List<RetrievedChunk> candidates, int topN, ModelTarget target) {

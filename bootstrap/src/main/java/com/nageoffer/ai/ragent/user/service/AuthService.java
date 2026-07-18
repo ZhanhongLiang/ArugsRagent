@@ -20,9 +20,15 @@ package com.nageoffer.ai.ragent.user.service;
 import com.nageoffer.ai.ragent.user.controller.request.LoginRequest;
 import com.nageoffer.ai.ragent.user.controller.vo.LoginVO;
 
+/**
+ * 用户认证业务端口。
+ * 控制器只调用此接口，Sa-Token 登录状态与数据库校验细节由实现类封装。
+ */
 public interface AuthService {
 
+    /** @return 登录成功后供前端保存的 token、角色和头像信息。 */
     LoginVO login(LoginRequest requestParam);
 
+    /** 注销当前请求上下文关联的 Sa-Token 会话。 */
     void logout();
 }

@@ -35,6 +35,12 @@ import java.util.stream.Collectors;
 @Component
 public class MarkdownDocumentParser implements DocumentParser {
 
+    /*
+     * Markdown keeps structural hints:
+     * Unlike Tika extraction, Markdown text is preserved almost as-is. Headers,
+     * lists and code fences are useful signals for the structure-aware chunker, so
+     * this parser does not eagerly convert Markdown into HTML or flattened prose.
+     */
     @Override
     public String getParserType() {
         return ParserType.MARKDOWN.getType();

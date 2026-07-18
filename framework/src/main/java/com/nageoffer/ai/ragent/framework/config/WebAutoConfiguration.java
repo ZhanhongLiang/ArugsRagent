@@ -22,14 +22,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Web 组件自动装配
+ * Web 基础组件自动装配。
+ *
+ * <p>将统一异常转换器显式注册为 Bean，使所有业务模块无须各自声明异常处理器，
+ * 也能返回一致的 Result 协议。</p>
  */
 @Configuration
 public class WebAutoConfiguration {
 
-    /**
-     * 构建全局异常拦截器组件 Bean
-     */
+    /** @return 统一把领域异常、参数异常和未知异常映射为 HTTP 响应的处理器。 */
     @Bean
     public GlobalExceptionHandler globalExceptionHandler() {
         return new GlobalExceptionHandler();

@@ -26,6 +26,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.nageoffer.ai.ragent.infra.util.LLMResponseCleaner;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
+import com.nageoffer.ai.ragent.knowledge.access.service.KnowledgeAccessService;
 import com.nageoffer.ai.ragent.rag.dao.entity.IntentNodeDO;
 import com.nageoffer.ai.ragent.rag.dao.mapper.IntentNodeMapper;
 import com.nageoffer.ai.ragent.framework.convention.ChatMessage;
@@ -61,6 +63,7 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
     private final IntentNodeMapper intentNodeMapper;
     private final PromptTemplateLoader promptTemplateLoader;
     private final IntentTreeCacheManager intentTreeCacheManager;
+    private final KnowledgeAccessService knowledgeAccessService;
 
     /**
      * 从Redis加载意图树并构建内存结构
@@ -83,9 +86,9 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
             return new IntentTreeData(List.of(), List.of(), Map.of());
         }
         // 扁平化所有节点
-        List<IntentNode> allNodes = flatten(roots); // 扁平化处理
+        List<IntentNode> allNodes = flatten(roots); // 扁平化处理，其实就是存在栈中
         List<IntentNode> leafNodes = allNodes.stream()
-                .filter(IntentNode::isLeaf)
+                .filter(IntentNode::isLeaf) // 找到所有叶子节点
                 .collect(Collectors.toList());
         Map<String, IntentNode> id2Node = allNodes.stream()
                 .collect(Collectors.toMap(IntentNode::getId, n -> n));
@@ -118,6 +121,7 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
         List<IntentNode> result = new ArrayList<>();
         Deque<IntentNode> stack = new ArrayDeque<>(roots);
         while (!stack.isEmpty()) {
+            // 将节点存在栈中
             IntentNode n = stack.pop();
             result.add(n);
             if (n.getChildren() != null) {
@@ -135,10 +139,22 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
      */
     @Override
     public List<NodeScore> classifyTargets(String question) {
-        // 每次都从Redis读取最新数据, 先尝试从Redis命中树节点
-        IntentTreeData data = loadIntentTreeData();
+        return classifyTargets(question, knowledgeAccessService.currentAccessScope());
+    }
 
-        String systemPrompt = buildPrompt(data.leafNodes); // 构造提示词
+    @Override
+    public List<NodeScore> classifyTargets(String question, KnowledgeAccessScope accessScope) {
+        // 每次都从Redis读取最新数据, 先尝试从Redis命中树节点
+        IntentTreeData data = loadIntentTreeData(); // 获得record的IntentTreeData, 包含所有节点、叶子节点, id:所有节点
+
+        List<IntentNode> candidateNodes = filterReadableLeafNodes(data.leafNodes, accessScope);
+        if (candidateNodes.isEmpty()) {
+            log.info("当前用户没有可参与分类的意图叶子节点，跳过意图识别");
+            return List.of();
+        }
+        Map<String, IntentNode> candidateNodeById = candidateNodes.stream()
+                .collect(Collectors.toMap(IntentNode::getId, node -> node));
+        String systemPrompt = buildPrompt(candidateNodes); // 构造提示词
         ChatRequest request = ChatRequest.builder()
                 .messages(List.of(
                         ChatMessage.system(systemPrompt),
@@ -193,7 +209,7 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
                  * LLM 返回的 `id` 在 `id2Node` 查找表中找不到。可能的原因：LLM 编造了一个不存在的 ID，
                  * 或者拼写有偏差。跳过并打 warn 日志——日志里记录了 LLM 编造的 ID，方便排查 Prompt 是不是需要调整。
                  */
-                IntentNode node = data.id2Node.get(id);
+                IntentNode node = candidateNodeById.get(id);
                 if (node == null) {
                     log.warn("LLM 返回了未知的意图节点 ID: {}, 已跳过", id);
                     continue;
@@ -219,6 +235,18 @@ public class DefaultIntentClassifier implements IntentClassifier, IntentNodeRegi
             log.warn("解析 LLM 响应失败, 原始内容: {}", raw, e);
             return List.of();
         }
+    }
+
+    /**
+     * 系统和 MCP 节点不依赖知识库；KB 节点必须先通过数据范围过滤，
+     * 避免未授权知识库的名称、描述与示例被拼入发给模型的分类 Prompt。
+     */
+    private List<IntentNode> filterReadableLeafNodes(List<IntentNode> leafNodes,
+                                                      KnowledgeAccessScope accessScope) {
+        return leafNodes.stream()
+                .filter(node -> !node.isKB()
+                        || accessScope.canReadCollection(node.getCollectionName()))
+                .toList();
     }
 
     /**

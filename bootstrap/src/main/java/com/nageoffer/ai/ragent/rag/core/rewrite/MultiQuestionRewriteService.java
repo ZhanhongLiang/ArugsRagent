@@ -68,12 +68,15 @@ public class MultiQuestionRewriteService implements QueryRewriteService {
         return rewriteAndSplit(userQuestion);
     }
 
+    // 这个在streampipeline调用了, 改写提问问意图是需要载入history的
     @Override
     @RagTraceNode(name = "query-rewrite-and-split", type = "REWRITE")
     public RewriteResult rewriteWithSplit(String userQuestion, List<ChatMessage> history) {
         //开关关闭 → 术语归一化 + 规则拆分
         if (!ragConfigProperties.getQueryRewriteEnabled()) {
+            // 先某些术语进行归一化处理
             String normalized = queryTermMappingService.normalize(userQuestion);
+            // 用来LLM之前的兜底拆解子问题
             List<String> subs = ruleBasedSplit(normalized);
             return new RewriteResult(normalized, subs);
         }
@@ -109,7 +112,9 @@ public class MultiQuestionRewriteService implements QueryRewriteService {
         ChatRequest req = buildRewriteRequest(systemPrompt, normalizedQuestion, history);
 
         try {
+            // 调用大模型进行问题子问题划分
             String raw = llmService.chat(req); // 用LLM进行问答改写
+            // 将大模型返回的结果中的string格式变成RewriteResult格式
             RewriteResult parsed = parseRewriteAndSplit(raw);
 
             if (parsed != null) {

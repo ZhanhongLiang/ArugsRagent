@@ -33,11 +33,10 @@ import java.util.Map;
 import static com.nageoffer.ai.ragent.rag.constant.RAGConstant.CONVERSATION_TITLE_PROMPT_PATH;
 
 /**
- * 会话标题生成器
- * <p>
- * 拆为独立 bean 是为了让 Spring AOP 的 {@link RagTraceNode} 拦截生效：
- * 同类 self-call 不会触发 proxy，所以原 ConversationServiceImpl 内部直接调
- * private 方法时，标题生成的 LLM 调用无法挂在 trace 节点下，会变成孤立的 root 节点
+ * 使用首个用户问题生成会话标题的独立组件。
+ *
+ * <p>拆成单独 Spring Bean 是为了让 {@link RagTraceNode} 经过 AOP 代理生效；
+ * 若在 {@code ConversationServiceImpl} 内部自调用，Spring 无法拦截该调用，标题生成会脱离当前 Trace 链路。</p>
  */
 @Slf4j
 @Component
@@ -50,10 +49,12 @@ public class ConversationTitleGenerator {
 
     @RagTraceNode(name = "conversation-title-gen", type = "TITLE_GEN")
     public String generate(String question) {
+        // 配置异常时保留合理兜底，确保新会话仍可创建。
         int maxLen = memoryProperties.getTitleMaxLength();
         if (maxLen <= 0) {
             maxLen = 30;
         }
+        // 模板把长度约束和原问题一起交给模型，避免在服务端粗暴截断语义。
         String prompt = promptTemplateLoader.render(
                 CONVERSATION_TITLE_PROMPT_PATH,
                 Map.of(
@@ -63,6 +64,7 @@ public class ConversationTitleGenerator {
         );
 
         try {
+            // 标题生成不需要深度推理；失败不能阻断聊天主流程，故返回固定兜底标题。
             ChatRequest request = ChatRequest.builder()
                     .messages(List.of(ChatMessage.user(prompt)))
                     .temperature(0.7D)

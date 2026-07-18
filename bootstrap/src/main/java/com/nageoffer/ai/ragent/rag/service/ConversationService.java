@@ -24,8 +24,7 @@ import com.nageoffer.ai.ragent.rag.service.bo.ConversationCreateBO;
 import java.util.List;
 
 /**
- * 会话服务接口
- * 提供会话的创建、重命名和删除功能
+ * 会话主记录的应用服务契约，定义列表、创建/续期、重命名和级联删除操作。
  */
 public interface ConversationService {
 
@@ -38,8 +37,7 @@ public interface ConversationService {
     List<ConversationVO> listByUserId(String userId);
 
     /**
-     * 创建或更新会话
-     * 如果 ConversationCreateBO 里的会话 ID 存在则更新，不存在则创建
+     * 以用户和会话 ID 为范围创建或续期会话；存在时仅刷新最后活跃时间。
      *
      * @param request 创建请求对象
      */
@@ -54,7 +52,7 @@ public interface ConversationService {
     void rename(String conversationId, ConversationUpdateRequest request);
 
     /**
-     * 删除会话
+     * 删除会话及其关联的消息、摘要；实现必须保证操作原子性。
      *
      * @param conversationId 会话 ID
      */

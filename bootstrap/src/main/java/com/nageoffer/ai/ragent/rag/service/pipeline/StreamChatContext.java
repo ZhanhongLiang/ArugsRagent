@@ -19,6 +19,7 @@ package com.nageoffer.ai.ragent.rag.service.pipeline;
 
 import com.nageoffer.ai.ragent.framework.convention.ChatMessage;
 import com.nageoffer.ai.ragent.infra.chat.StreamCallback;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.rag.core.rewrite.RewriteResult;
 import com.nageoffer.ai.ragent.rag.dto.SubQuestionIntent;
 import lombok.Builder;
@@ -66,4 +67,10 @@ public class StreamChatContext {
     @Setter
     // 阶段 3 填充：每个子问题对应的一组意图分数。
     private List<SubQuestionIntent> subIntents;
+
+    /**
+     * 在问答入口解析一次，后续异步意图分类与检索均使用同一份权限快照。
+     */
+    @Setter
+    private KnowledgeAccessScope knowledgeAccessScope;
 }

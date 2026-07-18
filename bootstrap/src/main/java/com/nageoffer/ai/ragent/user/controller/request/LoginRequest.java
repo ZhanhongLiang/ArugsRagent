@@ -19,10 +19,13 @@ package com.nageoffer.ai.ragent.user.controller.request;
 
 import lombok.Data;
 
+/** 前端登录请求体，只携带身份凭证，不含任何由客户端决定的权限字段。 */
 @Data
 public class LoginRequest {
 
+    /** 用户名。 */
     private String username;
 
+    /** 密码；不会在响应对象或日志中回显。 */
     private String password;
 }

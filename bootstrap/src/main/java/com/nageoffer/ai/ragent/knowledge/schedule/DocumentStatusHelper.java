@@ -29,13 +29,21 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 
+/**
+ * 定时同步场景下的文档状态 CAS 与故障恢复组件。
+ *
+ * <p>调度租约锁防止同一 schedule 被多实例同时执行；本组件额外以文档状态 RUNNING 做文档级保护，
+ * 防止手动分块和定时刷新同时重建同一份文档。</p>
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class DocumentStatusHelper {
 
+    /** 定时任务写入审计字段时使用的系统操作人。 */
     private static final String SYSTEM_USER = "system";
 
+    /** 文档状态与文件元数据持久化入口。 */
     private final KnowledgeDocumentMapper documentMapper;
 
     /**
@@ -56,7 +64,12 @@ public class DocumentStatusHelper {
      *
      */
 
+    /**
+     * 尝试将文档从非 RUNNING 原子切换到 RUNNING。
+     * 仅未删除、已启用文档可以被抢占；返回 true 表示本次执行者获得文档级运行权。
+     */
     public boolean tryMarkRunning(String docId) {
+        // 受影响行数为 1 才说明当前执行者抢占成功，0 表示已被手动或其它调度任务占用。
         return documentMapper.update(
                 Wrappers.lambdaUpdate(KnowledgeDocumentDO.class)
                         .set(KnowledgeDocumentDO::getStatus, DocumentStatus.RUNNING.getCode())
@@ -68,6 +81,7 @@ public class DocumentStatusHelper {
         ) > 0;
     }
 
+    /** 仅当文档仍归属 RUNNING 状态时标记失败，避免覆盖后来成功任务的状态。 */
     public void markFailedIfRunning(String docId) {
         documentMapper.update(
                 Wrappers.lambdaUpdate(KnowledgeDocumentDO.class)
@@ -78,6 +92,10 @@ public class DocumentStatusHelper {
         );
     }
 
+    /**
+     * 在新文件已成功分块和索引后，才将文档主表切换到新对象存储元数据。
+     * 这样下载或重建失败时旧文件 URL 仍然可用于回滚和继续服务。
+     */
     public void applyRefreshedFileMetadata(String docId, StoredFileDTO stored) {
         KnowledgeDocumentDO update = KnowledgeDocumentDO.builder()
                 .id(docId)
@@ -93,6 +111,10 @@ public class DocumentStatusHelper {
         }
     }
 
+    /**
+     * 将超过安全超时且仍为 RUNNING 的文档重置为 FAILED。
+     * 最小 10 分钟避免短暂网络波动或大文件处理被过早误判为卡死。
+     */
     public int recoverStuckRunning(long timeoutMinutes) {
         long safeTimeout = Math.max(timeoutMinutes, 10);
         Date threshold = new Date(System.currentTimeMillis() - safeTimeout * 60 * 1000);

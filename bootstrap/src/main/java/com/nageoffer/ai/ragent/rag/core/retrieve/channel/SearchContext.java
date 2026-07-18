@@ -17,6 +17,7 @@
 
 package com.nageoffer.ai.ragent.rag.core.retrieve.channel;
 
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.rag.dto.SubQuestionIntent;
 import lombok.Builder;
 import lombok.Data;
@@ -58,6 +59,9 @@ public class SearchContext {
      * 期望返回的结果数量
      */
     private int topK;
+
+    /** 本次检索固定使用的知识数据可见范围快照。 */
+    private KnowledgeAccessScope accessScope;
 
     /**
      * 扩展元数据

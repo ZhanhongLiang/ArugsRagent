@@ -26,8 +26,9 @@ import lombok.NoArgsConstructor;
 import java.util.Map;
 
 /**
- * 文档源实体类
- * 描述文档的来源信息，包括源类型、访问位置、文件名称以及访问凭证等
+ * 文档来源描述，是“如何取到原文件”的数据，而不是解析后的文档内容。
+ *
+ * <p>它可以被持久化到任务中，在定时同步时再次交给 FetcherNode；credentials 不应写入公开日志或前端响应。</p>
  */
 @Data
 @NoArgsConstructor
@@ -35,26 +36,15 @@ import java.util.Map;
 @Builder
 public class DocumentSource {
 
-    /**
-     * 文档源类型
-     * 如 file、url、feishu、s3 等
-     */
+    /** 来源协议类型，决定 FetcherNode 选择哪个 DocumentFetcher。 */
     private SourceType type;
 
-    /**
-     * 文档的访问位置
-     * 可以是文件路径、URL地址或第三方平台的资源标识
-     */
+    /** 来源位置，例如 s3:// URI、HTTP URL、飞书文档链接或兼容的本地路径。 */
     private String location;
 
-    /**
-     * 文档的文件名
-     */
+    /** 可选展示文件名；缺失时抓取器会尝试从响应头、URI 或对象键推断。 */
     private String fileName;
 
-    /**
-     * 访问文档所需的凭证信息
-     * 如 API Token、用户名密码等键值对
-     */
+    /** 访问来源所需的临时凭证；仅供对应 Fetcher 使用，不得进入日志或模型上下文。 */
     private Map<String, String> credentials;
 }

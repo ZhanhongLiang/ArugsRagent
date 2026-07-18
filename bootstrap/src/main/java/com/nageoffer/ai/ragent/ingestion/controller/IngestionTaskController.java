@@ -56,6 +56,8 @@ public class IngestionTaskController {
      */
     @PostMapping("/ingestion/tasks")
     public Result<IngestionResult> create(@RequestBody IngestionTaskCreateRequest request) {
+        // JSON 来源采集入口：Service 会把 request.source 转成 DocumentSource，
+        // 后续由流水线中的 Fetcher 节点负责加载真实文档字节。
         return Results.success(taskService.execute(request));
     }
 
@@ -66,6 +68,8 @@ public class IngestionTaskController {
     @PostMapping(value = "/ingestion/tasks/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<IngestionResult> upload(@RequestParam(value = "pipelineId") String pipelineId,
                                           @RequestPart("file") MultipartFile file) {
+        // Multipart 文件上传入口：Service 会读取上传字节并识别 MIME 类型，
+        // 然后复用和普通采集一致的 executeInternal 流水线。
         return Results.success(taskService.upload(pipelineId, file));
     }
 

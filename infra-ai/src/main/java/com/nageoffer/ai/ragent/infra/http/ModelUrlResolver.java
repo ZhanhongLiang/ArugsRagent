@@ -24,15 +24,16 @@ import lombok.NoArgsConstructor;
 import java.util.Map;
 
 /**
- * 模型URL解析器
- * 用于解析AI模型的完整URL地址，支持从候选模型配置或提供商配置中获取URL
+ * 根据模型候选与提供商配置解析最终调用 URL。
+ *
+ * <p>候选的完整 URL 优先，用于处理供应商特殊网关；否则按 provider 基础地址加能力端点拼接，
+ * 使 chat、embedding、rerank 共用同一份连接配置。</p>
  */
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class ModelUrlResolver {
 
     /**
-     * 解析模型URL地址
-     * 优先级：候选模型URL > 提供商基础URL + 端点路径
+     * 解析模型调用 URL，优先级为候选完整 URL 大于提供商基础 URL 加端点路径。
      *
      * @param provider   提供商配置，包含基础URL和端点配置
      * @param candidate  候选模型配置，可能包含自定义URL
@@ -44,6 +45,7 @@ public class ModelUrlResolver {
             AIModelProperties.ProviderConfig provider,
             AIModelProperties.ModelCandidate candidate,
             ModelCapability capability) {
+        // 特殊模型可覆盖供应商公共端点，例如不同区域、网关或私有部署地址。
         if (candidate != null && candidate.getUrl() != null && !candidate.getUrl().isBlank()) {
             return candidate.getUrl();
         }
@@ -51,6 +53,7 @@ public class ModelUrlResolver {
             throw new IllegalStateException("Provider baseUrl is missing");
         }
 
+        // endpoint key 与 ModelCapability 枚举名保持一致，统一转为小写读取 YAML。
         Map<String, String> endpoints = provider.getEndpoints();
         String key = capability.name().toLowerCase();
         String path = endpoints == null ? null : endpoints.get(key);
@@ -61,14 +64,7 @@ public class ModelUrlResolver {
         return joinUrl(provider.getUrl(), path);
     }
 
-    /**
-     * 拼接基础URL和路径
-     * 智能处理URL和路径之间的斜杠，确保拼接结果正确
-     *
-     * @param baseUrl 基础URL
-     * @param path    路径
-     * @return 拼接后的完整URL
-     */
+    /** 拼接基础 URL 与路径，并消除两端重复或缺失的斜杠。 */
     private static String joinUrl(String baseUrl, String path) {
         if (baseUrl.endsWith("/") && path.startsWith("/")) {
             return baseUrl + path.substring(1);

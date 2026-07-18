@@ -32,22 +32,26 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * 本地文件抓取器
- * 负责从本地文件系统或对象存储（如 S3 协议）中读取文件内容
+ * 旧版 FILE 来源抓取策略，兼容本地路径、file:// URI 和 s3:// 路径。
+ *
+ * <p>已废弃：新流程应分别使用 S3Fetcher 或上传后写入 S3 来源，保留它仅为了兼容历史管道配置。</p>
  */
 @Component
 @RequiredArgsConstructor
 @Deprecated
 public class LocalFileFetcher implements DocumentFetcher {
 
+    /** 用于读取 s3:// 对象流的存储服务。 */
     private final FileStorageService fileStorageService;
 
     @Override
+    /** @return 历史 FILE 来源类型。 */
     public SourceType supportedType() {
         return SourceType.FILE;
     }
 
     @Override
+    /** 根据 URI 协议选择对象存储或本地文件系统，并统一探测 MIME 类型。 */
     public FetchResult fetch(DocumentSource source) {
         String location = source.getLocation();
         if (!StringUtils.hasText(location)) {
@@ -56,6 +60,7 @@ public class LocalFileFetcher implements DocumentFetcher {
         try {
             byte[] bytes;
             String fileName = source.getFileName();
+            // s3:// 不应经 Path 读取，而是通过对象存储服务获取流。
             if (location.startsWith("s3://")) {
                 try (InputStream is = fileStorageService.openStream(location)) {
                     bytes = is.readAllBytes();
@@ -79,6 +84,7 @@ public class LocalFileFetcher implements DocumentFetcher {
         }
     }
 
+    /** 从对象键的最后一个斜杠后提取文件名，供 MIME 推断和展示使用。 */
     private String extractFileName(String location) {
         int idx = location.lastIndexOf('/');
         return idx >= 0 ? location.substring(idx + 1) : location;

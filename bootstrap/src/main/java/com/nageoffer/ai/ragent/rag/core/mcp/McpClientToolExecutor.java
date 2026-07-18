@@ -63,7 +63,7 @@ public class McpClientToolExecutor implements McpToolExecutor {
             log.info("MCP 远程工具调用完成, toolId={}, params={}, contentSize={}, elapsed={}ms",
                     toolDefinition.name(), args,
                     result.content() != null ? result.content().size() : 0,
-                    System.currentTimeMillis() - startMs);
+                    System.currentTimeMillis()  - startMs);
             return result;
         } catch (Exception e) {
             String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();

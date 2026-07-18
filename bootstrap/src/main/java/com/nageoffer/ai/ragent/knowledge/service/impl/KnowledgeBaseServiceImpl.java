@@ -27,6 +27,8 @@ import com.nageoffer.ai.ragent.knowledge.controller.request.KnowledgeBaseCreateR
 import com.nageoffer.ai.ragent.knowledge.controller.request.KnowledgeBasePageRequest;
 import com.nageoffer.ai.ragent.knowledge.controller.request.KnowledgeBaseUpdateRequest;
 import com.nageoffer.ai.ragent.knowledge.controller.vo.KnowledgeBaseVO;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
+import com.nageoffer.ai.ragent.knowledge.access.service.KnowledgeAccessService;
 import com.nageoffer.ai.ragent.knowledge.dao.entity.KnowledgeBaseDO;
 import com.nageoffer.ai.ragent.knowledge.dao.entity.KnowledgeDocumentDO;
 import com.nageoffer.ai.ragent.knowledge.dao.mapper.KnowledgeBaseMapper;
@@ -58,14 +60,28 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
+    /*
+     * 知识库是 RAG 管理体系的最外层容器。
+     *
+     * 这里同时维护三类隔离：
+     * 1. PostgreSQL 业务元数据：知识库名称、Embedding 模型、Collection 名称。
+     * 2. 对象存储 Bucket：存放该知识库上传或抓取的源文件。
+     * 3. 向量库 Collection：存放该知识库 Chunk 对应的向量。
+     *
+     * 重点面试点：embeddingModel 绑定知识库后不能随意切换，因为不同 Embedding 模型的维度和语义空间不兼容。
+     */
+
     private final KnowledgeBaseMapper knowledgeBaseMapper;
     private final KnowledgeDocumentMapper knowledgeDocumentMapper;
     private final VectorStoreAdmin vectorStoreAdmin;
     private final S3Client s3Client;
+    private final KnowledgeAccessService knowledgeAccessService;
 
     @Transactional
     @Override
     public String create(KnowledgeBaseCreateRequest requestParam) {
+        knowledgeAccessService.requireManageKnowledgeBase(null);
+        // Create three aligned resources: DB metadata, object-storage bucket and vector collection.
         // 名称重复校验
         String name = requestParam.getName().replaceAll("\\s+", "");
         Long count = knowledgeBaseMapper.selectCount(
@@ -88,6 +104,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
         knowledgeBaseMapper.insert(kbDO);
 
+        // Source files are isolated by bucket; vector rows are isolated by collection using the same logical name.
         String bucketName = requestParam.getCollectionName();
         try {
             s3Client.createBucket(builder -> builder.bucket(bucketName));
@@ -107,6 +124,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
                         .build())
                 .remark(requestParam.getName())
                 .build();
+        // Ensure the vector collection exists before documents can be chunked and indexed.
         vectorStoreAdmin.ensureVectorSpace(spaceSpec);
 
         return String.valueOf(kbDO.getId());
@@ -114,6 +132,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
     @Override
     public void update(KnowledgeBaseUpdateRequest requestParam) {
+        knowledgeAccessService.requireManageKnowledgeBase(requestParam.getId());
         KnowledgeBaseDO kb = knowledgeBaseMapper.selectById(requestParam.getId());
         if (kb == null || kb.getDeleted() != null && kb.getDeleted() == 1) {
             throw new ClientException("知识库不存在：" + requestParam.getId());
@@ -145,6 +164,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
     @Override
     public void rename(String kbId, KnowledgeBaseUpdateRequest requestParam) {
+        knowledgeAccessService.requireManageKnowledgeBase(kbId);
         KnowledgeBaseDO kb = knowledgeBaseMapper.selectById(kbId);
         if (kb == null || kb.getDeleted() != null && kb.getDeleted() == 1) {
             throw new ClientException("知识库不存在");
@@ -176,6 +196,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(String kbId) {
+        knowledgeAccessService.requireManageKnowledgeBase(kbId);
         KnowledgeBaseDO kbDO = knowledgeBaseMapper.selectById(kbId);
         if (kbDO == null || kbDO.getDeleted() != null && kbDO.getDeleted() == 1) {
             throw new ClientException("知识库不存在");
@@ -197,6 +218,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
     @Override
     public KnowledgeBaseVO queryById(String kbId) {
+        knowledgeAccessService.requireReadableKnowledgeBase(kbId);
         KnowledgeBaseDO kbDO = knowledgeBaseMapper.selectById(kbId);
         if (kbDO == null || kbDO.getDeleted() != null && kbDO.getDeleted() == 1) {
             throw new ClientException("知识库不存在");
@@ -206,10 +228,17 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
     @Override
     public IPage<KnowledgeBaseVO> pageQuery(KnowledgeBasePageRequest requestParam) {
+        KnowledgeAccessScope accessScope = knowledgeAccessService.currentAccessScope();
+        if (!accessScope.unrestricted() && accessScope.readableKnowledgeBaseIds().isEmpty()) {
+            return new Page<KnowledgeBaseVO>(requestParam.getCurrent(), requestParam.getSize());
+        }
         LambdaQueryWrapper<KnowledgeBaseDO> queryWrapper = Wrappers.lambdaQuery(KnowledgeBaseDO.class)
                 .like(StringUtils.hasText(requestParam.getName()), KnowledgeBaseDO::getName, requestParam.getName())
                 .eq(KnowledgeBaseDO::getDeleted, 0)
                 .orderByDesc(KnowledgeBaseDO::getUpdateTime);
+        if (!accessScope.unrestricted()) {
+            queryWrapper.in(KnowledgeBaseDO::getId, accessScope.readableKnowledgeBaseIds());
+        }
 
         Page<KnowledgeBaseDO> page = new Page<>(requestParam.getCurrent(), requestParam.getSize());
         IPage<KnowledgeBaseDO> result = knowledgeBaseMapper.selectPage(page, queryWrapper);
@@ -227,6 +256,16 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
                                 .eq("deleted", 0)
                                 .groupBy("kb_id")
                 );
+                if (!accessScope.unrestricted()) {
+                    rows = knowledgeDocumentMapper.selectMaps(
+                            Wrappers.query(KnowledgeDocumentDO.class)
+                                    .select("kb_id", "COUNT(1) AS doc_count")
+                                    .in("kb_id", kbIds)
+                                    .in("id", accessScope.readableDocumentIds())
+                                    .eq("deleted", 0)
+                                    .groupBy("kb_id")
+                    );
+                }
                 for (Map<String, Object> row : rows) {
                     Object kbIdValue = row.get("kb_id");
                     Object countValue = row.get("doc_count");

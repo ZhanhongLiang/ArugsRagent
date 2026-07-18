@@ -18,8 +18,9 @@
 package com.nageoffer.ai.ragent.rag.core.vector;
 
 /**
- * 向量空间元数据/索引管理（与检索解耦）
- * 用于确保空间存在：不存在就按规格创建；存在则校验兼容性
+ * 向量空间与索引的管理抽象，与文档写入和在线检索解耦。
+ *
+ * <p>知识库创建阶段可通过它确保底层资源准备完成；具体实现自行决定“空间”对应独立 collection 还是共享表索引。</p>
  */
 public interface VectorStoreAdmin {
 

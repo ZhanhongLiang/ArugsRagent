@@ -30,7 +30,7 @@ public abstract class ForwardingStreamCallback implements StreamCallback {
     private final StreamCallback delegate;
     private final AtomicBoolean finished = new AtomicBoolean(false);
     private final AtomicBoolean firstContentSeen = new AtomicBoolean(false);
-
+    // 这里的delegate其实就是bridge传入
     protected ForwardingStreamCallback(StreamCallback delegate) {
         this.delegate = delegate;
     }

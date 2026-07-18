@@ -26,6 +26,7 @@ import com.nageoffer.ai.ragent.knowledge.controller.request.KnowledgeChunkPageRe
 import com.nageoffer.ai.ragent.knowledge.controller.request.KnowledgeChunkUpdateRequest;
 import com.nageoffer.ai.ragent.knowledge.controller.vo.KnowledgeChunkVO;
 import com.nageoffer.ai.ragent.knowledge.service.KnowledgeChunkService;
+import com.nageoffer.ai.ragent.knowledge.access.service.KnowledgeAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -46,7 +47,15 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 public class KnowledgeChunkController {
 
+    /*
+     * Chunk management API.
+     *
+     * These endpoints are for manual correction after automatic chunking. Every edit must
+     * keep business Chunk rows and vector-store rows synchronized, which is handled by the service layer.
+     */
+
     private final KnowledgeChunkService knowledgeChunkService;
+    private final KnowledgeAccessService knowledgeAccessService;
 
     /**
      * 分页查询 Chunk 列表
@@ -54,6 +63,7 @@ public class KnowledgeChunkController {
     @GetMapping("/knowledge-base/docs/{doc-id}/chunks")
     public Result<IPage<KnowledgeChunkVO>> pageQuery(@PathVariable("doc-id") String docId,
                                                      @Validated KnowledgeChunkPageRequest requestParam) {
+        knowledgeAccessService.requireReadableDocument(docId);
         return Results.success(knowledgeChunkService.pageQuery(docId, requestParam));
     }
 
@@ -63,6 +73,8 @@ public class KnowledgeChunkController {
     @PostMapping("/knowledge-base/docs/{doc-id}/chunks")
     public Result<KnowledgeChunkVO> create(@PathVariable("doc-id") String docId,
                                            @RequestBody KnowledgeChunkCreateRequest request) {
+        knowledgeAccessService.requireManageDocument(docId);
+        // Manual create immediately embeds and indexes this chunk when the document is enabled.
         return Results.success(knowledgeChunkService.create(docId, request));
     }
 
@@ -73,6 +85,8 @@ public class KnowledgeChunkController {
     public Result<Void> update(@PathVariable("doc-id") String docId,
                                @PathVariable("chunk-id") String chunkId,
                                @RequestBody KnowledgeChunkUpdateRequest request) {
+        knowledgeAccessService.requireManageDocument(docId);
+        // Updating text regenerates the vector, otherwise retrieval would still use stale semantics.
         knowledgeChunkService.update(docId, chunkId, request);
         return Results.success();
     }
@@ -83,6 +97,7 @@ public class KnowledgeChunkController {
     @DeleteMapping("/knowledge-base/docs/{doc-id}/chunks/{chunk-id}")
     public Result<Void> delete(@PathVariable("doc-id") String docId,
                                @PathVariable("chunk-id") String chunkId) {
+        knowledgeAccessService.requireManageDocument(docId);
         knowledgeChunkService.delete(docId, chunkId);
         return Results.success();
     }
@@ -94,6 +109,8 @@ public class KnowledgeChunkController {
     public Result<Void> enable(@PathVariable("doc-id") String docId,
                                @PathVariable("chunk-id") String chunkId,
                                @RequestParam("value") boolean enabled) {
+        knowledgeAccessService.requireManageDocument(docId);
+        // Disable removes the vector but keeps the text row; enable re-indexes it.
         knowledgeChunkService.enableChunk(docId, chunkId, enabled);
         return Results.success();
     }
@@ -105,6 +122,7 @@ public class KnowledgeChunkController {
     public Result<Void> batchEnable(@PathVariable("doc-id") String docId,
                                     @RequestParam("value") boolean enabled,
                                     @RequestBody(required = false) KnowledgeChunkBatchRequest request) {
+        knowledgeAccessService.requireManageDocument(docId);
         knowledgeChunkService.batchToggleEnabled(docId, request, enabled);
         return Results.success();
     }

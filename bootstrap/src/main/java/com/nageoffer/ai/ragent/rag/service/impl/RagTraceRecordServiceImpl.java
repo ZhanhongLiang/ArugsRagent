@@ -29,7 +29,8 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 
 /**
- * RAG Trace 记录服务实现
+ * Trace 运行记录和节点记录的最小持久化实现。
+ * 所有更新均按 traceId（节点还包含 nodeId）定位，避免覆盖同一会话并发请求的记录。
  */
 @Service
 @RequiredArgsConstructor
@@ -40,11 +41,13 @@ public class RagTraceRecordServiceImpl implements RagTraceRecordService {
 
     @Override
     public void startRun(RagTraceRunDO run) {
+        // 入口处插入 RUNNING 运行记录，后续由 Trace Runner 统一收尾。
         runMapper.insert(run);
     }
 
     @Override
     public void finishRun(String traceId, String status, String errorMessage, Date endTime, long durationMs) {
+        // 只更新结束态字段，保留开始时采集的请求上下文和关联信息。
         RagTraceRunDO update = RagTraceRunDO.builder()
                 .status(status)
                 .errorMessage(errorMessage)
@@ -57,11 +60,13 @@ public class RagTraceRecordServiceImpl implements RagTraceRecordService {
 
     @Override
     public void startNode(RagTraceNodeDO node) {
+        // 节点先插入再执行，异常路径才能可靠地更新为 ERROR。
         nodeMapper.insert(node);
     }
 
     @Override
     public void finishNode(String traceId, String nodeId, String status, String errorMessage, Date endTime, long durationMs) {
+        // traceId + nodeId 是树节点的业务唯一定位条件。
         RagTraceNodeDO update = RagTraceNodeDO.builder()
                 .status(status)
                 .errorMessage(errorMessage)

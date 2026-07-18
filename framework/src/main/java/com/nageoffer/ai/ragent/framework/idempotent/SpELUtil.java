@@ -30,20 +30,26 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * SpEL 表达式解析工具
+ * 幂等键中 SpEL 表达式的解析工具。
+ *
+ * <p>注解可以写固定字符串，也可以写 {@code #request.id} 这类依赖方法参数的表达式；
+ * 本工具负责识别两者并将参数名绑定到 Spring EL 上下文。</p>
  */
 public final class SpELUtil {
 
+    /** 通过反射读取被拦截方法的编译参数名，用于给 SpEL 变量命名。 */
     private static final DefaultParameterNameDiscoverer PARAMETER_NAME_DISCOVERER = new DefaultParameterNameDiscoverer();
+    /** Spring 官方 SpEL 解析器实例，可复用且无状态。 */
     private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser();
 
     /**
-     * 校验并返回实际使用的 spEL 表达式
+     * 判断传入内容是否包含 SpEL 标识，只有表达式才进入解析流程。
      *
      * @param spEl spEL 表达式
      * @return 实际使用的 spEL 表达式
      */
     public static Object parseKey(String spEl, Method method, Object[] contextObj) {
+        // # 表示变量引用，T( 表示调用类型静态成员；两者均需要 EL 解析。
         List<String> spELFlag = ListUtil.of("#", "T(");
         Optional<String> optional = spELFlag.stream().filter(spEl::contains).findFirst();
         if (optional.isPresent()) {
@@ -53,17 +59,20 @@ public final class SpELUtil {
     }
 
     /**
-     * 转换参数为字符串
+     * 在方法参数上下文中计算 SpEL 表达式。
      *
      * @param spEl       spEl 表达式
      * @param contextObj 上下文对象
      * @return 解析的字符串值
      */
     public static Object parse(String spEl, Method method, Object[] contextObj) {
+        // 将表达式文本编译为可执行对象。
         Expression exp = EXPRESSION_PARSER.parseExpression(spEl);
+        // 参数名例如 request，会被绑定为 #request 供注解表达式访问。
         String[] params = PARAMETER_NAME_DISCOVERER.getParameterNames(method);
         StandardEvaluationContext context = new StandardEvaluationContext();
         if (ArrayUtil.isNotEmpty(params)) {
+            // 按方法形参位置绑定实际入参；表达式求值时即可访问对应变量。
             for (int len = 0; len < params.length; len++) {
                 context.setVariable(params[len], contextObj[len]);
             }

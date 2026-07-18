@@ -21,6 +21,7 @@ import cn.hutool.core.util.StrUtil;
 import com.nageoffer.ai.ragent.rag.config.RAGDefaultProperties;
 import com.nageoffer.ai.ragent.framework.convention.RetrievedChunk;
 import com.nageoffer.ai.ragent.infra.embedding.EmbeddingService;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.request.data.BaseVector;
@@ -32,6 +33,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,22 +61,33 @@ public class MilvusRetrieverService implements RetrieverService {
 
     @Override
     public List<RetrievedChunk> retrieveByVector(float[] vector, RetrieveRequest retrieveParam) {
+        KnowledgeAccessScope accessScope = retrieveParam.getAccessScope();
+        String collectionName = StrUtil.isBlank(retrieveParam.getCollectionName())
+                ? ragDefaultProperties.getCollectionName()
+                : retrieveParam.getCollectionName();
+        if (accessScope != null && !accessScope.canReadCollection(collectionName)) {
+            return List.of();
+        }
+        if (accessScope != null && !accessScope.unrestricted() && accessScope.readableDocumentIds().isEmpty()) {
+            return List.of();
+        }
         List<BaseVector> vectors = List.of(new FloatVec(vector));
 
         Map<String, Object> params = new HashMap<>();
         params.put("metric_type", ragDefaultProperties.getMetricType());
         params.put("ef", 128);
 
-        SearchReq req = SearchReq.builder()
-                .collectionName(
-                        StrUtil.isBlank(retrieveParam.getCollectionName()) ? ragDefaultProperties.getCollectionName() : retrieveParam.getCollectionName()
-                )
+        SearchReq.SearchReqBuilder<?, ?> builder = SearchReq.builder()
+                .collectionName(collectionName)
                 .annsField("embedding")
                 .data(vectors)
                 .topK(retrieveParam.getTopK())
                 .searchParams(params)
-                .outputFields(List.of("id", "content", "metadata"))
-                .build();
+                .outputFields(List.of("id", "content", "metadata"));
+        if (accessScope != null && !accessScope.unrestricted()) {
+            builder.filter("metadata[\"doc_id\"] in [" + quoteValues(accessScope.readableDocumentIds()) + "]");
+        }
+        SearchReq req = builder.build();
 
         SearchResp resp = milvusClient.search(req);
         List<List<SearchResp.SearchResult>> results = resp.getSearchResults();
@@ -106,5 +119,11 @@ public class MilvusRetrieverService implements RetrieverService {
         float[] nv = new float[v.length];
         for (int i = 0; i < v.length; i++) nv[i] = (float) (v[i] / len);
         return nv;
+    }
+
+    private String quoteValues(java.util.Set<String> values) {
+        return values.stream()
+                .map(value -> "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
+                .collect(Collectors.joining(", "));
     }
 }

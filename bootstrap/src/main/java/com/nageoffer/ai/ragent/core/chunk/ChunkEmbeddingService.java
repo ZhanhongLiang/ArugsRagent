@@ -33,6 +33,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChunkEmbeddingService {
 
+    /*
+     * Converts text chunks into embeddings.
+     *
+     * This service deliberately receives already-split VectorChunk objects. Parsing and chunking
+     * are upstream concerns; this class only calls the routed EmbeddingService and writes the
+     * returned vectors back to the same chunk objects.
+     */
+
     private final EmbeddingService embeddingService;
 
     /**
@@ -42,6 +50,8 @@ public class ChunkEmbeddingService {
      * @param embeddingModel 嵌入模型 ID，null 时使用系统默认模型
      */
     public void embed(List<VectorChunk> chunks, String embeddingModel) {
+        // If vectors already exist, skip duplicate embedding calls. This matters when a pipeline node
+        // has already enriched chunks with embeddings.
         if (chunks == null || chunks.isEmpty()) {
             return;
         }
@@ -51,6 +61,7 @@ public class ChunkEmbeddingService {
         List<String> texts = chunks.stream()
                 .map(c -> c.getContent() == null ? "" : c.getContent())
                 .toList();
+        // A knowledge base may pin a specific embedding model so query vectors and stored vectors share one space.
         List<List<Float>> vectors = StringUtils.hasText(embeddingModel)
                 ? embeddingService.embedBatch(texts, embeddingModel)
                 : embeddingService.embedBatch(texts);
@@ -58,6 +69,7 @@ public class ChunkEmbeddingService {
     }
 
     private void applyEmbeddings(List<VectorChunk> chunks, List<List<Float>> vectors) {
+        // Order is the contract: vector[i] must correspond to chunks[i], otherwise retrieval will attach wrong semantics.
         if (vectors == null || vectors.size() != chunks.size()) {
             throw new ClientException("Embedding result size mismatch");
         }

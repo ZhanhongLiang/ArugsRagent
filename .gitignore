@@ -76,5 +76,10 @@ id_ed25519
 bootstrap/src/main/resources/application-local.yaml
 ### RAG evaluation local runtime artifacts ###
 eval/rag/state/*.json
+eval/rag/qingju/state/*.json
+eval/rag/qingju/runs/*.jsonl
+eval/rag/qingju/runs/*_scores.json
+eval/rag/qingju/reports/
+eval/rag/qingju/init/__pycache__/
 eval/rag/runs/*.jsonl
 eval/rag/reports/

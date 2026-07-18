@@ -45,11 +45,25 @@ public class SaTokenStpInterfaceImpl implements StpInterface {
      *
      * @param loginId   登录用户ID
      * @param loginType 登录类型
-     * @return 权限列表（当前实现返回空列表）
+     * @return 按角色映射的稳定功能权限列表；数据范围由 KnowledgeAccessService 单独解析
      */
     @Override
     public List<String> getPermissionList(Object loginId, String loginType) {
-        return Collections.emptyList();
+        if (loginId == null) {
+            return Collections.emptyList();
+        }
+        String loginIdStr = loginId.toString();
+        if (!StrUtil.isNumeric(loginIdStr)) {
+            return Collections.emptyList();
+        }
+        UserDO user = userMapper.selectById(loginIdStr);
+        if (user == null || StrUtil.isBlank(user.getRole())) {
+            return Collections.emptyList();
+        }
+        if ("admin".equalsIgnoreCase(user.getRole())) {
+            return List.of("knowledge:read", "knowledge:manage", "knowledge:access:manage", "user:manage");
+        }
+        return List.of("knowledge:read");
     }
 
     /**

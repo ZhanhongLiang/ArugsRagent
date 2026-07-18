@@ -27,25 +27,24 @@ import org.springframework.context.annotation.Configuration;
 
 
 /**
- * 数据库持久层配置类
- * 配置 MyBatis-Plus 相关分页插件等
+ * MyBatis-Plus 持久层基础配置。
+ *
+ * <p>数据库采用 PostgreSQL，因此分页 SQL 必须通过 PostgreSQL 方言插件生成；
+ * 同时注册统一的审计字段填充器。</p>
  */
 @Configuration
 public class DataBaseConfiguration {
 
-    /**
-     * MyBatis-Plus PostgreSQL 分页插件
-     */
+    /** @return 配置 PostgreSQL 方言的分页拦截器，避免按默认方言拼接分页 SQL。 */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
+        // 外层拦截器可容纳多个 InnerInterceptor，当前先注册分页能力。
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.POSTGRE_SQL));
         return interceptor;
     }
 
-    /**
-     * MyBatis-Plus 源数据自动填充类
-     */
+    /** @return 在插入和更新时写入创建人、更新人、时间等审计字段的处理器。 */
     @Bean
     public MetaObjectHandler myMetaObjectHandler() {
         return new MyMetaObjectHandler();

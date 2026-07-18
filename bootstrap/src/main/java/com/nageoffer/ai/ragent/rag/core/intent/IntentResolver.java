@@ -22,6 +22,7 @@ import com.nageoffer.ai.ragent.rag.dto.IntentCandidate;
 import com.nageoffer.ai.ragent.rag.dto.IntentGroup;
 import com.nageoffer.ai.ragent.rag.dto.SubQuestionIntent;
 import com.nageoffer.ai.ragent.framework.trace.RagTraceNode;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.rag.core.rewrite.RewriteResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +64,13 @@ public class IntentResolver {
      */
     @RagTraceNode(name = "intent-resolve", type = "INTENT")
     public List<SubQuestionIntent> resolve(RewriteResult rewriteResult) {
+        return resolve(rewriteResult, null);
+    }
+
+    /**
+     * 对一次问答内所有子问题复用同一份数据权限快照。
+     */
+    public List<SubQuestionIntent> resolve(RewriteResult rewriteResult, KnowledgeAccessScope accessScope) {
         List<String> subQuestions = CollUtil.isNotEmpty(rewriteResult.subQuestions())
                 ? rewriteResult.subQuestions()
                 : List.of(rewriteResult.rewrittenQuestion());
@@ -80,7 +88,7 @@ public class IntentResolver {
                 .map(q -> CompletableFuture.supplyAsync(
                         () -> {
                             try {
-                                return new SubQuestionIntent(q, classifyIntents(q)); // 尝试从意识图分解出来
+                                return new SubQuestionIntent(q, classifyIntents(q, accessScope)); // 尝试从意识图分解出来
                             } catch (Exception e) {
                                 log.error("子问题意图分类失败，降级为空意图，question：{}", q, e);
                                 return new SubQuestionIntent(q, List.of());
@@ -100,6 +108,7 @@ public class IntentResolver {
         List<SubQuestionIntent> subIntents = tasks.stream()
                 .map(CompletableFuture::join)
                 .toList();
+        // 可以理解本来3个子问题，9个意图；经过封顶算法后，最后变成每个子问题1个意图，也就是共3个意图；
         return capTotalIntents(subIntents); // 封顶算法
     }
 
@@ -135,12 +144,16 @@ public class IntentResolver {
                 && nodeScores.get(0).getNode().getKind() == SYSTEM;
     }
 
-    private List<NodeScore> classifyIntents(String question) {
-        List<NodeScore> scores = intentClassifier.classifyTargets(question); //利用LLM进行意图识别
+    private List<NodeScore> classifyIntents(String question, KnowledgeAccessScope accessScope) {
+        // 最终得到每个叶子节点的得分, 也就是有多个个叶子节点，就有多少个node
+        List<NodeScore> scores = accessScope == null
+                ? intentClassifier.classifyTargets(question)
+                : intentClassifier.classifyTargets(question, accessScope); //利用LLM进行意图识别
         /**
          * - 过滤掉分数低于 `INTENT_MIN_SCORE`（0.35）的节点。
          * - 限制每个子问题最多保留 `MAX_INTENT_COUNT`（3）个意图。
          */
+        // 限制低于0.35分数每个子问题只保留3个意图,
         return scores.stream()
                 .filter(ns -> ns.getScore() >= INTENT_MIN_SCORE)
                 .limit(MAX_INTENT_COUNT)
@@ -156,11 +169,12 @@ public class IntentResolver {
      * 3. 剩余配额按分数从高到低分配给其他意图
      */
     private List<SubQuestionIntent> capTotalIntents(List<SubQuestionIntent> subIntents) {
+        // 所有子问题的意图总数
         int totalIntents = subIntents.stream()
                 .mapToInt(si -> si.nodeScores().size())
                 .sum();
 
-        // 未超限，直接返回
+        // 未超限，直接返回，如果总数少于3个，直接返回就行
         if (totalIntents <= MAX_INTENT_COUNT) {
             return subIntents;
         }
@@ -169,6 +183,7 @@ public class IntentResolver {
         List<IntentCandidate> allCandidates = collectAllCandidates(subIntents);
 
         // 步骤2：每个子问题保留最高分意图
+        // 先筛选出每个子问题得分最高的意图！！
         List<IntentCandidate> guaranteedIntents = selectTopIntentPerSubQuestion(allCandidates, subIntents.size());
 
         // 步骤3：计算剩余配额

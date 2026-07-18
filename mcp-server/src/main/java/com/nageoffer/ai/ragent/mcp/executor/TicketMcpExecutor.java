@@ -36,12 +36,19 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+/**
+ * 客户技术支持工单的离线模拟 MCP 工具。
+ *
+ * <p>工具按当天固定随机种子生成最近 30 天的工单，使汇总、列表和统计在同一天内稳定可复现。</p>
+ */
 @Slf4j
 @Component
 public class TicketMcpExecutor {
 
+    /** MCP 工具唯一标识。 */
     private static final String TOOL_ID = "ticket_query";
 
+    /** 模拟数据使用的地区、产品、状态、优先级与问题分类枚举。 */
     private static final List<String> REGIONS = List.of("华东", "华南", "华北", "西南", "西北");
     private static final List<String> PRODUCTS = List.of("企业版", "专业版", "基础版");
     private static final String STATUS_PENDING = "待处理";
@@ -52,6 +59,7 @@ public class TicketMcpExecutor {
     private static final List<String> PRIORITIES = List.of("紧急", "高", "中", "低");
     private static final List<String> CATEGORIES = List.of("功能异常", "性能问题", "安装部署", "使用咨询", "数据问题", "权限问题");
 
+    /** 按地区生成客户名称与工程师，保证工单的地域关系合理。 */
     private static final Map<String, List<String>> CUSTOMERS_BY_REGION = Map.of(
             "华东", List.of("腾讯科技", "阿里巴巴", "字节跳动", "网易公司"),
             "华南", List.of("美团点评", "京东集团", "小米科技", "格力电器"),
@@ -68,6 +76,7 @@ public class TicketMcpExecutor {
             "西北", List.of("工程师E1", "工程师E2")
     );
 
+    /** 用于生成工单标题的典型技术支持问题模板。 */
     private static final List<String> ISSUE_TEMPLATES = List.of(
             "系统登录后页面白屏无法操作",
             "报表导出功能超时失败",
@@ -86,15 +95,18 @@ public class TicketMcpExecutor {
             "数据备份任务执行失败"
     );
 
+    /** 当日模拟数据缓存及其日期键，避免每次 tools/call 都重新生成并改变统计结果。 */
     private List<TicketRecord> cachedData;
     private String cacheKey;
 
+    /** 注册工单查询工具和同步处理器。 */
     @Bean
     public McpServerFeatures.SyncToolSpecification ticketToolSpecification() {
         return new McpServerFeatures.SyncToolSpecification(buildTool(),
                 (exchange, request) -> handleCall(request));
     }
 
+    /** 构建可由 LLM 参数提取器理解的工单筛选 Schema。 */
     private Tool buildTool() {
         Map<String, Object> properties = new LinkedHashMap<>();
 
@@ -140,6 +152,7 @@ public class TicketMcpExecutor {
                 "default", 10
         ));
 
+        // 所有筛选条件都可选；未提供时表示全量查询。
         JsonSchema inputSchema = new JsonSchema(
                 "object", properties, List.of(), null, null, null);
 
@@ -150,9 +163,11 @@ public class TicketMcpExecutor {
                 .build();
     }
 
+    /** 解析工具参数，筛选缓存数据，并按 summary/list/stats 输出对应文本。 */
     private CallToolResult handleCall(CallToolRequest request) {
         long startMs = System.currentTimeMillis();
         try {
+            // 兼容 MCP 请求没有 arguments 的情况。
             Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
             String region = stringArg(args, "region");
             String status = stringArg(args, "status");
@@ -162,12 +177,15 @@ public class TicketMcpExecutor {
             String queryType = stringArg(args, "queryType");
             Integer limit = intArg(args, "limit");
 
+            // 使用 Schema 默认值，并避免非正数 limit 造成空结果。
             if (queryType == null || queryType.isBlank()) queryType = "summary";
             if (limit == null || limit <= 0) limit = 10;
 
+            // 先取得稳定的当日数据，再应用所有可选筛选条件。
             List<TicketRecord> allData = getOrGenerateData();
             List<TicketRecord> filtered = filterData(allData, region, status, priority, product, customerName);
 
+            // 根据查询类型选择不同粒度的结果视图。
             String result = switch (queryType) {
                 case "list" -> buildListResult(filtered, limit);
                 case "stats" -> buildStatsResult(filtered);
@@ -184,9 +202,11 @@ public class TicketMcpExecutor {
         }
     }
 
+    /** 构建总量、状态分布、解决率和高优先级风险的概览。 */
     private String buildSummaryResult(List<TicketRecord> data, String region, String status,
                                       String priority, String product) {
         int total = data.size();
+        // 逐状态统计，用于计算解决率和展现服务积压。
         long pending = data.stream().filter(t -> STATUS_PENDING.equals(t.status)).count();
         long inProgress = data.stream().filter(t -> STATUS_IN_PROGRESS.equals(t.status)).count();
         long resolved = data.stream().filter(t -> STATUS_RESOLVED.equals(t.status)).count();
@@ -211,11 +231,13 @@ public class TicketMcpExecutor {
         sb.append(String.format("  已解决: %d 个\n", resolved));
         sb.append(String.format("  已关闭: %d 个\n\n", closed));
 
+        // 已解决与已关闭都视为已完成，用二者之和计算解决率。
         if (total > 0) {
             double resolveRate = (resolved + closed) * 100.0 / total;
             sb.append(String.format("解决率: %.1f%%\n", resolveRate));
         }
 
+        // 紧急和高优先级工单单独提示，便于模型在回答中强调风险。
         if (urgent + high > 0) {
             sb.append(String.format("\n⚠ 紧急/高优先级工单: %d 个（紧急 %d，高 %d）\n", urgent + high, urgent, high));
         }
@@ -241,7 +263,9 @@ public class TicketMcpExecutor {
         return sb.toString().trim();
     }
 
+    /** 按优先级优先、创建时间倒序列出最需要处理的工单。 */
     private String buildListResult(List<TicketRecord> data, int limit) {
+        // PRIORITIES 的索引已按紧急到低排序，索引越小优先级越高。
         List<TicketRecord> sorted = data.stream()
                 .sorted((a, b) -> {
                     int pa = PRIORITIES.indexOf(a.priority);
@@ -266,6 +290,7 @@ public class TicketMcpExecutor {
         return sb.toString().trim();
     }
 
+    /** 从问题分类、产品解决率和处理中工单量三个角度输出统计分析。 */
     private String buildStatsResult(List<TicketRecord> data) {
         StringBuilder sb = new StringBuilder();
         sb.append("【工单统计分析】\n\n");
@@ -275,6 +300,7 @@ public class TicketMcpExecutor {
             return sb.toString();
         }
 
+        // 分类占比帮助识别最常见的技术支持问题。
         Map<String, Long> byCategory = data.stream()
                 .collect(Collectors.groupingBy(t -> t.category, Collectors.counting()));
         sb.append("【问题分类统计】\n");
@@ -284,6 +310,7 @@ public class TicketMcpExecutor {
                         e.getKey(), e.getValue(), e.getValue() * 100.0 / data.size())));
 
         sb.append("\n【各产品解决率】\n");
+        // 每个产品分别计算完成占比，避免总解决率掩盖某产品的服务问题。
         Map<String, List<TicketRecord>> byProduct = data.stream()
                 .collect(Collectors.groupingBy(t -> t.product));
         byProduct.forEach((product, tickets) -> {
@@ -294,6 +321,7 @@ public class TicketMcpExecutor {
         });
 
         sb.append("\n【处理人工单量排名】\n");
+        // 只统计待处理和处理中工单，反映当前工程师待办负载而非历史总量。
         Map<String, Long> byEngineer = data.stream()
                 .filter(t -> STATUS_PENDING.equals(t.status) || STATUS_IN_PROGRESS.equals(t.status))
                 .collect(Collectors.groupingBy(t -> t.engineer, Collectors.counting()));
@@ -305,6 +333,7 @@ public class TicketMcpExecutor {
         return sb.toString().trim();
     }
 
+    /** 使用 AND 语义叠加所有非空条件；客户名允许包含匹配。 */
     private List<TicketRecord> filterData(List<TicketRecord> data, String region, String status,
                                           String priority, String product, String customerName) {
         return data.stream()
@@ -316,6 +345,7 @@ public class TicketMcpExecutor {
                 .toList();
     }
 
+    /** 以当前日期做缓存键，让同一天的多次查询共享同一批模拟工单。 */
     private List<TicketRecord> getOrGenerateData() {
         String key = "tickets_" + LocalDate.now();
         if (cachedData != null && key.equals(cacheKey)) return cachedData;
@@ -324,12 +354,18 @@ public class TicketMcpExecutor {
         return cachedData;
     }
 
+    /**
+     * 生成最近 30 个自然日的工作日工单。
+     * 越早的工单越倾向于关闭或解决，越新的工单更可能仍在排队或处理中，模拟真实生命周期。
+     */
     private List<TicketRecord> generateMockData() {
         List<TicketRecord> records = new ArrayList<>();
         LocalDate today = LocalDate.now();
+        // 日期固定种子使同一天生成的工单字段与统计值稳定可复现。
         Random random = new Random(today.toEpochDay());
         int ticketSeq = 1;
 
+        // 仅在工作日生成工单，更贴近企业技术支持工作节奏。
         for (int d = 0; d < 30; d++) {
             LocalDate date = today.minusDays(d);
             if (date.getDayOfWeek().getValue() > 5) continue;
@@ -346,12 +382,14 @@ public class TicketMcpExecutor {
                 ticket.engineer = ENGINEERS_BY_REGION.get(ticket.region).get(random.nextInt(2));
                 ticket.createDate = date.format(DateTimeFormatter.ISO_LOCAL_DATE);
 
+                // 使用加权分布让“低/中”优先级占多数，“紧急”更少见。
                 int priorityWeight = random.nextInt(100);
                 if (priorityWeight < 5) ticket.priority = "紧急";
                 else if (priorityWeight < 20) ticket.priority = "高";
                 else if (priorityWeight < 60) ticket.priority = "中";
                 else ticket.priority = "低";
 
+                // 工单越久，处理完成概率越高；新工单则保留较多待处理状态。
                 if (d > 7) {
                     ticket.status = random.nextInt(100) < 80 ? STATUS_CLOSED : STATUS_RESOLVED;
                 } else if (d > 3) {
@@ -374,17 +412,20 @@ public class TicketMcpExecutor {
         return records;
     }
 
+    /** 从 MCP 动态参数读取字符串，不存在时返回 null。 */
     private static String stringArg(Map<String, Object> args, String key) {
         Object val = args.get(key);
         return val != null ? val.toString() : null;
     }
 
+    /** 从 MCP 动态参数读取整数，仅接受 JSON 数字类型。 */
     private static Integer intArg(Map<String, Object> args, String key) {
         Object val = args.get(key);
         if (val instanceof Number n) return n.intValue();
         return null;
     }
 
+    /** 构造成功的 MCP 文本结果。 */
     private static CallToolResult successResult(String text) {
         return CallToolResult.builder()
                 .content(List.of(new TextContent(text)))
@@ -392,6 +433,7 @@ public class TicketMcpExecutor {
                 .build();
     }
 
+    /** 构造协议级错误结果，供调用端识别工具调用失败。 */
     private static CallToolResult errorResult(String message) {
         return CallToolResult.builder()
                 .content(List.of(new TextContent(message)))
@@ -399,6 +441,7 @@ public class TicketMcpExecutor {
                 .build();
     }
 
+    /** 工单模拟数据的内部载体，不直接暴露到 MCP 协议。 */
     private static class TicketRecord {
         String ticketId;
         String region;

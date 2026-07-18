@@ -23,29 +23,26 @@ import lombok.RequiredArgsConstructor;
 import java.util.Objects;
 
 /**
- * 幂等 MQ 消费状态枚举
+ * MQ 消费幂等记录的轻量状态机。
+ * CONSUMING 防止并发消费者同时执行，CONSUMED 表示业务副作用已经完成。
  */
 @RequiredArgsConstructor
 public enum IdempotentConsumeStatusEnum {
 
-    /**
-     * 消费中
-     */
+    /** 已抢到幂等键、业务方法正在执行；重入时需要拒绝或稍后重试。 */
     CONSUMING("0"),
 
-    /**
-     * 已消费
-     */
+    /** 业务方法已成功完成；重复消息可直接跳过。 */
     CONSUMED("1");
 
     @Getter
     private final String code;
 
     /**
-     * 如果消费状态等于消费中，返回失败
+     * 判断当前状态是否仍在消费中。
      *
      * @param consumeStatus 消费状态
-     * @return 是否消费失败
+     * @return true 表示其他线程或实例尚在执行该消息，当前调用不能重复处理
      */
     public static boolean isError(String consumeStatus) {
         return Objects.equals(CONSUMING.code, consumeStatus);

@@ -23,10 +23,11 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 把 awaitFirstPacket 拆为独立 bean，便于 AOP 采集 TTFT trace
- * <p>
- * Spring AOP 不拦截类内 self-call，因此 RoutingLLMService 必须依赖外部 bean
- * 调用此方法，{@code @RagTraceNode} 才会生效
+ * 首包等待探测器。
+ *
+ * <p>将 awaitFirstPacket 拆为独立 Spring Bean，便于 AOP 采集 TTFT Trace。
+ * Spring AOP 不拦截类内自调用，因此 RoutingLLMService 必须通过外部 Bean
+ * 调用本方法，{@code @RagTraceNode} 才会生效。</p>
  */
 @Component
 public class LlmFirstPacketProbe {
@@ -35,6 +36,7 @@ public class LlmFirstPacketProbe {
     public ProbeStreamBridge.ProbeResult awaitFirstPacket(ProbeStreamBridge bridge,
                                                           long timeout,
                                                           TimeUnit unit) throws InterruptedException {
+        // 实际阻塞逻辑由桥接器完成；本类只提供可被 AOP 拦截的 Trace 边界。
         return bridge.awaitFirstPacket(timeout, unit);
     }
 }

@@ -82,6 +82,7 @@ public class RerankPostProcessor implements SearchResultPostProcessor {
             return chunks;
         }
         // 委托rerankService的rerank进行额外重排
+        // 这个是
         return rerankService.rerank(
                 context.getMainQuestion(),
                 chunks,

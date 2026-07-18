@@ -23,8 +23,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 节点执行结果实体类
- * 表示管道中单个节点执行完成后的结果信息，包含执行状态、是否继续执行后续节点等信息
+ * 单个摄取节点向执行引擎返回的控制结果。
+ * success 表示节点是否正常完成，shouldContinue 独立表达成功后是否需要停止整条流水线。
  */
 @Data
 @NoArgsConstructor
@@ -32,37 +32,25 @@ import lombok.NoArgsConstructor;
 @Builder
 public class NodeResult {
 
-    /**
-     * 节点是否执行成功
-     */
+    /** false 时引擎将任务置为 FAILED 并停止后续节点。 */
     private boolean success;
 
-    /**
-     * 是否应继续执行后续节点
-     */
+    /** success=true 时仍可为 false，用于业务性提前终止。 */
     private boolean shouldContinue;
 
-    /**
-     * 结果消息说明
-     */
+    /** 面向任务日志和排查的简短执行说明。 */
     private String message;
 
-    /**
-     * 节点执行失败时的异常信息
-     */
+    /** 失败根因；引擎会将其消息和堆栈记录到任务日志。 */
     private Throwable error;
 
-    /**
-     * 创建成功结果
-     *
-     * @return 表示执行成功且应继续执行的结果对象
-     */
+    /** @return 无说明的成功结果，执行链继续。 */
     public static NodeResult ok() {
         return NodeResult.builder().success(true).shouldContinue(true).build();
     }
 
     /**
-     * 创建带消息的成功结果
+     * 创建带日志说明的成功结果。
      *
      * @param message 结果消息
      * @return 表示执行成功且应继续执行的结果对象
@@ -72,7 +60,7 @@ public class NodeResult {
     }
 
     /**
-     * 创建跳过结果
+     * 创建“正常跳过”结果；跳过不是失败，执行链仍继续。
      *
      * @param reason 跳过原因
      * @return 表示节点被跳过但应继续执行的结果对象
@@ -82,7 +70,7 @@ public class NodeResult {
     }
 
     /**
-     * 创建失败结果
+     * 创建失败结果；引擎收到后会结束本次摄取任务。
      *
      * @param error 异常信息
      * @return 表示执行失败且不应继续执行的结果对象
@@ -97,7 +85,7 @@ public class NodeResult {
     }
 
     /**
-     * 创建终止结果
+     * 创建成功但终止后续节点的结果，例如条件已满足无需再处理。
      *
      * @param reason 终止原因
      * @return 表示执行成功但应终止管道执行的结果对象

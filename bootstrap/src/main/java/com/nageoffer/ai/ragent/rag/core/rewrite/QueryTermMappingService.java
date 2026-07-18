@@ -74,6 +74,7 @@ public class QueryTermMappingService {
 
     /**
      * 加载映射规则：优先从 Redis 缓存读取，缓存未命中则从数据库加载并回填缓存
+     * 先尝试命中redis，如果不中就直接查询数据库，然后回填数据库
      */
     private List<QueryTermMappingDO> loadMappings() {
         List<QueryTermMappingDO> cached = cacheManager.getMappingsFromCache();

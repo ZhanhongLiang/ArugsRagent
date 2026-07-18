@@ -30,11 +30,13 @@ public class CustomIdentifierGenerator implements IdentifierGenerator {
 
     @Override
     public Number nextId(Object entity) {
+        // MyBatis-Plus 新增数值主键时调用，底层使用启动阶段初始化的 Snowflake 单例。
         return IdUtil.getSnowflakeNextId();
     }
 
     @Override
     public String nextUUID(Object entity) {
+        // 字符串主键场景使用同一 Snowflake 值的字符串表示，保持全局有序性。
         return IdUtil.getSnowflakeNextIdStr();
     }
 }

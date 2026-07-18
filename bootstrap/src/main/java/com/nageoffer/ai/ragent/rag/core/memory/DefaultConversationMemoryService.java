@@ -77,7 +77,10 @@ public class DefaultConversationMemoryService implements ConversationMemoryServi
 
         long startTime = System.currentTimeMillis();
         try {
-            // 摘要和最近历史互不依赖，异步并发加载，降低主链路等待时间。
+            // 搞懂CompletableFuture和Future区别，
+            // supplyAsync创建有返回值的任务，
+            // 摘要和最近历史互不依赖，异步并发加载，降低主链路等待时间。在memoryLoadExecutor线程中调用
+            // 自定义线程，如果没定义默认用JVM的线程池，所以自定义线程池可以防止线程冲突
             CompletableFuture<ChatMessage> summaryFuture = CompletableFuture.supplyAsync(
                     () -> loadSummaryWithFallback(conversationId, userId), memoryLoadExecutor
             );

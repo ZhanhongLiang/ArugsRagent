@@ -47,6 +47,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KnowledgeBaseController {
 
+    /*
+     * Knowledge-base API entry.
+     *
+     * A knowledge base is not just a display folder: it binds business metadata,
+     * object-storage bucket and vector collection. This controller stays thin and
+     * delegates all resource consistency checks to KnowledgeBaseService.
+     */
+
     private final KnowledgeBaseService knowledgeBaseService;
 
     /**
@@ -54,6 +62,7 @@ public class KnowledgeBaseController {
      */
     @PostMapping("/knowledge-base")
     public Result<String> createKnowledgeBase(@RequestBody KnowledgeBaseCreateRequest requestParam) {
+        // Creates DB metadata plus storage/vector isolation resources.
         return Results.success(knowledgeBaseService.create(requestParam));
     }
 
@@ -97,6 +106,8 @@ public class KnowledgeBaseController {
      */
     @GetMapping("/knowledge-base/chunk-strategies")
     public Result<List<ChunkStrategyVO>> listChunkStrategies() {
+        // Frontend reads visible chunk strategies and their default JSON config from the enum,
+        // so new strategies can be exposed without hardcoding UI options.
         List<ChunkStrategyVO> list = Arrays.stream(ChunkingMode.values())
                 .filter(ChunkingMode::isVisible)
                 .map(mode -> new ChunkStrategyVO(mode.getValue(), mode.getLabel(), mode.getDefaultConfig()))

@@ -26,6 +26,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+/**
+ * 创建或校验向量空间时使用的跨引擎规格。
+ * 具体实现可将同一份规格映射为 Milvus collection 或 pgvector 共享表索引。
+ */
 public class VectorSpaceSpec {
 
     /**
@@ -34,7 +38,7 @@ public class VectorSpaceSpec {
     private VectorSpaceId spaceId;
 
     /**
-     * 备注
+     * 管理侧备注，不参与向量检索和存储路由。
      */
     private String remark;
 }

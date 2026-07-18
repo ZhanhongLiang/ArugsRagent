@@ -40,7 +40,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * RAG 设置控制器，负责系统 RAG、AI 模型等配置信息的查询
+ * 向管理端暴露可展示的系统配置快照。
+ *
+ * <p>该接口只读且不会返回完整密钥；配置对象先转换为专用 VO，
+ * 防止内部运行配置、连接凭据或可变对象直接泄露给前端。</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -63,6 +66,7 @@ public class RAGSettingsController {
      */
     @GetMapping("/rag/settings")
     public Result<SystemSettingsVO> settings() {
+        // 聚合上传、RAG、限流、记忆和模型配置，前端无需读取多个配置接口。
         SystemSettingsVO response = SystemSettingsVO.builder()
                 .upload(SystemSettingsVO.UploadSettings.builder()
                         .maxFileSize(maxFileSize.toBytes())
@@ -90,6 +94,7 @@ public class RAGSettingsController {
     }
 
     private DefaultSettings toDefaultSettings(RAGDefaultProperties props) {
+        // 只投影管理页需要了解的默认向量空间信息。
         return DefaultSettings.builder()
                 .collectionName(props.getCollectionName())
                 .dimension(props.getDimension())
@@ -98,6 +103,7 @@ public class RAGSettingsController {
     }
 
     private MemorySettings toMemorySettings(MemoryProperties props) {
+        // 记忆配置影响上下文成本和历史保留策略，单独映射为展示对象。
         return MemorySettings.builder()
                 .historyKeepTurns(props.getHistoryKeepTurns())
                 .summaryEnabled(props.getSummaryEnabled())
@@ -108,6 +114,7 @@ public class RAGSettingsController {
     }
 
     private AISettings toAISettings(AIModelProperties props) {
+        // Provider 配置中 API Key 必须脱敏；其余模型路由字段可用于诊断当前可用能力。
         Map<String, AISettings.ProviderConfig> providers = new HashMap<>();
         if (props.getProviders() != null) {
             props.getProviders().forEach((k, v) -> providers.put(k, AISettings.ProviderConfig.builder()
@@ -140,6 +147,7 @@ public class RAGSettingsController {
         if (group == null) {
             return null;
         }
+        // 候选模型顺序与优先级原样保留，便于前端展示路由和降级配置。
         return AISettings.ModelGroup.builder()
                 .defaultModel(group.getDefaultModel())
                 .deepThinkingModel(group.getDeepThinkingModel())
@@ -165,6 +173,7 @@ public class RAGSettingsController {
             return null;
         }
         String trimmed = apiKey.trim();
+        // 短密钥不保留任何可猜测片段；长密钥仅展示首尾用于人工核对是否加载了正确配置。
         if (trimmed.length() <= 10) {
             return "******";
         }

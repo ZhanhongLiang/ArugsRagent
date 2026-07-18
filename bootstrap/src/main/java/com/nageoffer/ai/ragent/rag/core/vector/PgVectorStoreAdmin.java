@@ -24,6 +24,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+/**
+ * pgvector 的索引管理实现。
+ *
+ * <p>pgvector 模式下各逻辑知识库共用一张向量表，所以“创建向量空间”实际是确保该表的 HNSW 索引存在，
+ * 而不是按 collectionName 创建多张物理表。</p>
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -36,6 +42,7 @@ public class PgVectorStoreAdmin implements VectorStoreAdmin {
 
     @Override
     public void ensureVectorSpace(VectorSpaceSpec spec) {
+        // 索引名称固定，查询系统目录可让多次初始化保持幂等。
         String indexName = "idx_kv_embedding_hnsw";
 
         // noinspection SqlDialectInspection,SqlNoDataSourceInspection
@@ -46,6 +53,7 @@ public class PgVectorStoreAdmin implements VectorStoreAdmin {
             return;
         }
 
+        // 记录当前嵌入维度，便于排查模型维度与表向量列定义不兼容的问题。
         int dimension = ragDefaultProperties.getDimension();
         log.info("创建pgvector HNSW索引，维度: {}", dimension);
         jdbcTemplate.execute(String.format("CREATE INDEX IF NOT EXISTS %s ON t_knowledge_vector USING hnsw (embedding vector_cosine_ops)", indexName));
@@ -54,6 +62,7 @@ public class PgVectorStoreAdmin implements VectorStoreAdmin {
     @Override
     public boolean vectorSpaceExists(VectorSpaceId spaceId) {
         try {
+            // pg 模式不为每个 spaceId 单独建表；表可访问即代表共享向量空间已就绪。
             // noinspection SqlDialectInspection,SqlNoDataSourceInspection
             jdbcTemplate.queryForObject("SELECT COUNT(*) FROM t_knowledge_vector LIMIT 1", Integer.class);
             return true;

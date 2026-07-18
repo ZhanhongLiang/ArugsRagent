@@ -21,16 +21,21 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** 登录成功响应，前端据此保存会话令牌并初始化当前用户界面。 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginVO {
 
+    /** Sa-Token 登录主体 id。 */
     private String userId;
 
+    /** 当前用户角色代码。 */
     private String role;
 
+    /** Sa-Token 生成的访问令牌。 */
     private String token;
 
+    /** 头像展示地址。 */
     private String avatar;
 }

@@ -63,11 +63,13 @@ public class IntentGuidanceService {
      */
     @RagTraceNode(name = "guidance-detect", type = "GUIDANCE")
     public GuidanceDecision detectAmbiguity(String question, List<SubQuestionIntent> subIntents) {
+        // 关闭歧义引导的开关
         if (!Boolean.TRUE.equals(guidanceProperties.getEnabled())) {
             return GuidanceDecision.none();
         }
-        // 歧义引导
+        // 歧义引导， 获得需要澄清的group节点和topicname
         AmbiguityGroup group = findAmbiguityGroup(question, subIntents);
+        //
         if (group == null || CollUtil.isEmpty(group.ranked())) {
             return GuidanceDecision.none();
         }
@@ -77,6 +79,7 @@ public class IntentGuidanceService {
          * 要么 `NONE`（不引导，继续下游流程），要么 `PROMPT`（带着引导文案短路）。工厂方法 `none()` 和 `prompt()` 保证对象只能通过这两种方式创建。
          * 下游 Pipeline 只需要调一个 `isPrompt()` 就知道该怎么处理，决策和执行完全解耦。
          */
+        // 返回 prompt() 状态
         return GuidanceDecision.prompt(prompt);
     }
 
@@ -146,8 +149,9 @@ public class IntentGuidanceService {
         if (!confirmAmbiguity(question, ranked)) {
             return null;
         }
-
+        //
         List<NodeScore> trimmedRanked = trimRankedOptions(ranked);
+        // 获得当前子话题的
         String topicName = trimmedRanked.get(0).getNode().getName();
         return new AmbiguityGroup(topicName, trimmedRanked);
     }

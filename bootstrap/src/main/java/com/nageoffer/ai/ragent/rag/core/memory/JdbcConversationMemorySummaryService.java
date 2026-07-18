@@ -68,6 +68,7 @@ public class JdbcConversationMemorySummaryService implements ConversationMemoryS
     private final RedissonClient redissonClient;
     private final Executor memorySummaryExecutor;
 
+    // 压缩摘要地方，还是CompletableFuture线程异步进行 memorySummaryExecutor
     @Override
     public void compressIfNeeded(String conversationId, String userId, ChatMessage message) {
         if (!memoryProperties.getSummaryEnabled()) {
@@ -101,27 +102,31 @@ public class JdbcConversationMemorySummaryService implements ConversationMemoryS
         );
         return ChatMessage.system(wrapped);
     }
-
+    // 真正压缩代码
     private void doCompressIfNeeded(String conversationId, String userId) {
         long startTime = System.currentTimeMillis();
         int triggerTurns = memoryProperties.getSummaryStartTurns(); // 轮数阈值 = 滑动窗口+1
         int maxTurns = memoryProperties.getHistoryKeepTurns(); // 滑动窗口
+        // 防止滑动窗口外的历史信息没被压缩到！！
         if (maxTurns <= 0 || triggerTurns <= 0) {
             return;
         }
         // Redis 分布式锁来解决多例并发问题，防止重复历史摘要压缩
         String lockKey = SUMMARY_LOCK_PREFIX + buildLockKey(conversationId, userId);
-        RLock lock = redissonClient.getLock(lockKey);
+        RLock lock = redissonClient.getLock(lockKey); // 设置trylock，触发watchdog，watchdog里面采用lua续期锁
+        // 这里没用信号量来锁，采用了原始的lock方式
         if (!lock.tryLock()) {
             return; // 假设其他实例进行，则跳过
         }
         try {
+            // 查找当前对话窗口下有多少轮历史对话
             long total = conversationGroupService.countUserMessages(conversationId, userId);
             if (total < triggerTurns) { // 当前谈话轮数 < 轮数阈值
                 return;
             }
-
+            // 获取最新的摘要信息
             ConversationSummaryDO latestSummary = conversationGroupService.findLatestSummary(conversationId, userId);
+            // //获取最近 historyKeepTurns 条 USER 消息（倒序取）
             List<ConversationMessageDO> latestUserTurns = conversationGroupService.listLatestUserOnlyMessages(
                     conversationId,
                     userId,
@@ -130,16 +135,17 @@ public class JdbcConversationMemorySummaryService implements ConversationMemoryS
             if (latestUserTurns.isEmpty()) {
                 return;
             }
+            // cutoffId = 最近 N 条 USER 消息中最早的那条 ID（这些消息保留原文，不参与压缩）
             String cutoffId = resolveCutoffId(latestUserTurns);
             if (StrUtil.isBlank(cutoffId)) {
                 return;
             }
-
+            //afterId = 上一次摘要的 lastMessageId（水位线），也就是历史摘要表里面会记录最后截取成摘要的历史对话信息ID
             String afterId = resolveSummaryStartId(conversationId, userId, latestSummary);
             if (afterId != null && Long.parseLong(afterId) >= Long.parseLong(cutoffId)) {
                 return;
             }
-
+            // 获得需要压缩摘要的历史消息
             List<ConversationMessageDO> toSummarize = conversationGroupService.listMessagesBetweenIds(
                     conversationId,
                     userId,
@@ -149,7 +155,7 @@ public class JdbcConversationMemorySummaryService implements ConversationMemoryS
             if (CollUtil.isEmpty(toSummarize)) {
                 return;
             }
-
+            // 获得最后一条消息的ID
             String lastMessageId = resolveLastMessageId(toSummarize);
             if (StrUtil.isBlank(lastMessageId)) {
                 return;
@@ -175,6 +181,7 @@ public class JdbcConversationMemorySummaryService implements ConversationMemoryS
     }
     // 真正是在这调用模型进行压缩的
     private String summarizeMessages(List<ConversationMessageDO> messages, String existingSummary) {
+        // 把数据库里的历史消息记录，转换成大模型能识别的 ChatMessage 列表。
         List<ChatMessage> histories = toHistoryMessages(messages);
         if (CollUtil.isEmpty(histories)) {
             return existingSummary;
@@ -182,6 +189,7 @@ public class JdbcConversationMemorySummaryService implements ConversationMemoryS
 
         int summaryMaxChars = memoryProperties.getSummaryMaxChars();
         List<ChatMessage> summaryMessages = new ArrayList<>();
+        // 加载压缩prompt
         String summaryPrompt = promptTemplateLoader.render(
                 CONVERSATION_SUMMARY_PROMPT_PATH,
                 Map.of("summary_max_chars", String.valueOf(summaryMaxChars))
@@ -206,6 +214,7 @@ public class JdbcConversationMemorySummaryService implements ConversationMemoryS
                 .thinking(false)
                 .build();
         try {
+            // 用LLM总结
             String result = llmService.chat(request);
             log.info("对话摘要生成 - resultChars: {}", result.length());
 
@@ -216,6 +225,11 @@ public class JdbcConversationMemorySummaryService implements ConversationMemoryS
         }
     }
 
+    /**
+     * 把数据库里的历史消息记录，转换成大模型能识别的 ChatMessage 列表。
+     * @param messages
+     * @return
+     */
     private List<ChatMessage> toHistoryMessages(List<ConversationMessageDO> messages) {
         if (CollUtil.isEmpty(messages)) {
             return List.of();

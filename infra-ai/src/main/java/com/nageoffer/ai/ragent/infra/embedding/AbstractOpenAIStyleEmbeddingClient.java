@@ -50,6 +50,12 @@ import java.util.List;
 @Slf4j
 public abstract class AbstractOpenAIStyleEmbeddingClient implements EmbeddingClient {
 
+    /**
+     * OpenAI 兼容协议的公共边界：业务层只依赖 EmbeddingClient/RoutingEmbeddingService，
+     * 子类只声明供应商差异；本基类负责 model、input、dimensions、data[].embedding、错误转换与分片。
+     * 新增供应商时应保持该职责划分，避免把协议细节泄漏到业务层。
+     */
+
     // Embedding 只有同步调用，不需要流式客户端；所有请求都走这个 OkHttpClient。
     protected final OkHttpClient httpClient;
 
@@ -99,6 +105,10 @@ public abstract class AbstractOpenAIStyleEmbeddingClient implements EmbeddingCli
 
     @Override
     public List<List<Float>> embedBatch(List<String> texts, ModelTarget target) {
+        /*
+         * 顺序契约：第 n 个输出向量必须对应第 n 个输入文本。Chunk 编号、向量写库和后续检索都依赖该顺序；
+         * 当供应商批量上限迫使分片时，必须按原始全局下标回填，而不能仅依赖 append 的隐含顺序。
+         */
         // 空批次直接返回空列表，避免向供应商发送无意义请求。
         if (CollUtil.isEmpty(texts)) {
             return Collections.emptyList();
@@ -129,6 +139,10 @@ public abstract class AbstractOpenAIStyleEmbeddingClient implements EmbeddingCli
      * Embedding 模板方法：构建请求、发送 HTTP、解析 OpenAI 格式响应。
      */
     protected List<List<Float>> doEmbed(List<String> texts, ModelTarget target) {
+        /*
+         * 向量空间一致性：这里使用的模型和维度必须与向量库 collection schema 保持一致。
+         * 在同一集合混用不同维度或不同 embedding 模型，会让相似度分数失去可比性，甚至在插入时失败。
+         */
         // 1. 校验 provider 配置，获取 baseUrl、endpoint、apiKey 等运行时信息。
         AIModelProperties.ProviderConfig provider = HttpResponseHelper.requireProvider(target, provider());
         if (requiresApiKey()) {

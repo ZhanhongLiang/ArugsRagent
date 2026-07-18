@@ -34,14 +34,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+/**
+ * 基于固定城市坐标和确定性随机数的天气演示 MCP 工具。
+ *
+ * <p>这是离线演示实现，不访问真实气象服务；同一城市、同一天会得到相同结果，便于测试与复现。</p>
+ */
 @Slf4j
 @Component
 public class WeatherMcpExecutor {
 
+    /** 工具在 MCP 协议中的唯一名称。 */
     private static final String TOOL_ID = "weather_query";
 
+    /** 支持城市到纬度、经度的映射；当前模拟算法主要使用纬度调整气温。 */
     private static final Map<String, double[]> CITY_COORDINATES = new LinkedHashMap<>();
 
+    /** 初始化可查询的演示城市及其坐标。 */
     static {
         CITY_COORDINATES.put("北京", new double[]{39.9, 116.4});
         CITY_COORDINATES.put("上海", new double[]{31.2, 121.5});
@@ -65,18 +73,22 @@ public class WeatherMcpExecutor {
         CITY_COORDINATES.put("三亚", new double[]{18.3, 109.5});
     }
 
+    /** 四季各自的天气候选池，避免所有月份都出现不合理的天气描述。 */
     private static final List<String> WEATHER_TYPES_SPRING = List.of("晴", "多云", "阴", "小雨", "阵雨", "多云转晴");
     private static final List<String> WEATHER_TYPES_SUMMER = List.of("晴", "多云", "雷阵雨", "大雨", "暴雨", "多云转阴");
     private static final List<String> WEATHER_TYPES_AUTUMN = List.of("晴", "多云", "阴", "小雨", "晴转多云", "多云转晴");
     private static final List<String> WEATHER_TYPES_WINTER = List.of("晴", "多云", "阴", "小雪", "中雪", "晴转多云", "雾");
 
+    /** 注册天气工具和请求处理器，供 MCP Server 在 tools/list 中公布。 */
     @Bean
     public McpServerFeatures.SyncToolSpecification weatherToolSpecification() {
         return new McpServerFeatures.SyncToolSpecification(buildTool(),
                 (exchange, request) -> handleCall(request));
     }
 
+    /** 构建工具元数据和参数 Schema，使 LLM 能自动提取城市、查询类型和天数。 */
     private Tool buildTool() {
+        // 使用有序 Map 保持工具字段在调试输出与提示词中的顺序稳定。
         Map<String, Object> properties = new LinkedHashMap<>();
 
         properties.put("city", Map.of(
@@ -97,6 +109,7 @@ public class WeatherMcpExecutor {
                 "default", 3
         ));
 
+        // city 是唯一必填参数，其他字段由模型不提供时使用默认值。
         JsonSchema inputSchema = new JsonSchema(
                 "object", properties, List.of("city"), null, null, null);
 
@@ -107,9 +120,13 @@ public class WeatherMcpExecutor {
                 .build();
     }
 
+    /**
+     * 解析 MCP 参数、应用默认值与上限、选择当前天气或预报结果，并统一转换异常。
+     */
     private CallToolResult handleCall(CallToolRequest request) {
         long startMs = System.currentTimeMillis();
         try {
+            // MCP SDK 允许 arguments 为空，统一为空 Map 避免空指针。
             Map<String, Object> args = request.arguments() != null ? request.arguments() : Map.of();
             String city = stringArg(args, "city");
             String queryType = stringArg(args, "queryType");
@@ -118,14 +135,17 @@ public class WeatherMcpExecutor {
             if (city == null || city.isBlank()) {
                 return errorResult("请提供城市名称");
             }
+            // 省略可选参数时采用 Schema 中声明的默认语义。
             if (queryType == null || queryType.isBlank()) queryType = "current";
             if (days == null || days <= 0) days = 3;
             if (days > 7) days = 7;
 
+            // 离线数据只覆盖固定城市，防止没有坐标时生成误导性的结果。
             if (!CITY_COORDINATES.containsKey(city)) {
                 return errorResult("暂不支持查询该城市，当前支持：" + String.join("、", CITY_COORDINATES.keySet()));
             }
 
+            // forecast 走多日预测，其余值按当前天气处理，保证未知 queryType 仍有可用降级结果。
             String result = switch (queryType) {
                 case "forecast" -> buildForecastResult(city, days);
                 default -> buildCurrentResult(city);
@@ -141,6 +161,7 @@ public class WeatherMcpExecutor {
         }
     }
 
+    /** 生成指定城市当天的天气摘要及必要的出行提示。 */
     private String buildCurrentResult(String city) {
         LocalDate today = LocalDate.now();
         WeatherData weather = generateWeatherForDate(city, today);
@@ -157,6 +178,7 @@ public class WeatherMcpExecutor {
         sb.append(String.format("风力: %s\n", weather.windLevel));
         sb.append(String.format("空气质量: %s\n", weather.airQuality));
 
+        // 优先提示降水，其次提示极端高低温。
         if (weather.weatherType.contains("雨") || weather.weatherType.contains("雪")) {
             sb.append("\n提示: 今日有降水，出行请携带雨具。");
         } else if (weather.highTemp >= 35) {
@@ -168,12 +190,14 @@ public class WeatherMcpExecutor {
         return sb.toString().trim();
     }
 
+    /** 逐日生成未来天气，并在温差明显时补充升温或降温趋势。 */
     private String buildForecastResult(String city, int days) {
         LocalDate today = LocalDate.now();
 
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("【%s 未来%d天天气预报】\n\n", city, days));
 
+        // 从今天开始连续生成指定天数的预测快照。
         for (int d = 0; d < days; d++) {
             LocalDate date = today.plusDays(d);
             WeatherData weather = generateWeatherForDate(city, date);
@@ -186,6 +210,7 @@ public class WeatherMcpExecutor {
 
         WeatherData todayWeather = generateWeatherForDate(city, today);
         WeatherData lastDayWeather = generateWeatherForDate(city, today.plusDays(days - 1));
+        // 仅在首尾最高温差达到 5 摄氏度时输出趋势，避免无意义噪声。
         int tempTrend = lastDayWeather.highTemp - todayWeather.highTemp;
         if (Math.abs(tempTrend) >= 5) {
             sb.append(String.format("趋势: 未来%d天气温%s，注意%s。",
@@ -197,6 +222,10 @@ public class WeatherMcpExecutor {
         return sb.toString().trim();
     }
 
+    /**
+     * 根据城市纬度、季节和固定随机种子生成天气数据。
+     * 使用日期和城市作为种子，保证同一输入在多次调用中结果一致。
+     */
     private WeatherData generateWeatherForDate(String city, LocalDate date) {
         double[] coords = CITY_COORDINATES.get(city);
         double latitude = coords[0];
@@ -204,8 +233,10 @@ public class WeatherMcpExecutor {
         Random random = new Random(seed);
 
         int month = date.getMonthValue();
+        // 以 0 到 3 表示春夏秋冬，后续统一用于温度、湿度和天气候选池选择。
         int season = (month >= 3 && month <= 5) ? 0 : (month >= 6 && month <= 8) ? 1 : (month >= 9 && month <= 11) ? 2 : 3;
 
+        // 纬度越高，基础温度越低；不同季节使用不同下降系数。
         double baseTemp = switch (season) {
             case 0 -> 15 - (latitude - 25) * 0.5;
             case 1 -> 30 - (latitude - 25) * 0.3;
@@ -217,6 +248,7 @@ public class WeatherMcpExecutor {
         int lowTemp = (int) (baseTemp - 3 - random.nextInt(5));
         int currentTemp = lowTemp + random.nextInt(Math.max(1, highTemp - lowTemp));
 
+        // 按季节选取天气类型后再随机抽取，避免夏天出现小雪等明显失真情况。
         List<String> weatherTypes = switch (season) {
             case 0 -> WEATHER_TYPES_SPRING;
             case 1 -> WEATHER_TYPES_SUMMER;
@@ -225,6 +257,7 @@ public class WeatherMcpExecutor {
         };
         String weatherType = weatherTypes.get(random.nextInt(weatherTypes.size()));
 
+        // 夏季湿度较高、冬季较低；雨雪天气再额外提高湿度。
         int humidity = switch (season) {
             case 1 -> 60 + random.nextInt(30);
             case 3 -> 20 + random.nextInt(30);
@@ -238,6 +271,7 @@ public class WeatherMcpExecutor {
         int windForce = 1 + random.nextInt(5);
         String windLevel = windForce + "-" + (windForce + 1) + "级";
 
+        // 简化 AQI 模型：北方城市增加基础值，再映射为用户可读等级。
         int aqiBase = 30 + random.nextInt(120);
         if (latitude > 35) aqiBase += 20;
         String airQuality;
@@ -246,6 +280,7 @@ public class WeatherMcpExecutor {
         else if (aqiBase <= 150) airQuality = "轻度污染";
         else airQuality = "中度污染";
 
+        // 将离散计算结果收敛成内部 DTO，供当前和预报两种格式化逻辑复用。
         WeatherData data = new WeatherData();
         data.weatherType = weatherType;
         data.currentTemp = currentTemp;
@@ -258,17 +293,20 @@ public class WeatherMcpExecutor {
         return data;
     }
 
+    /** 将 MCP 动态参数转换为字符串；不存在时保留 null 供上层应用默认值。 */
     private static String stringArg(Map<String, Object> args, String key) {
         Object val = args.get(key);
         return val != null ? val.toString() : null;
     }
 
+    /** 仅接受 JSON 数字类型的整数参数，其他类型视为未传入。 */
     private static Integer intArg(Map<String, Object> args, String key) {
         Object val = args.get(key);
         if (val instanceof Number n) return n.intValue();
         return null;
     }
 
+    /** 构造正常文本结果，供 Bootstrap 合并到 MCP 上下文。 */
     private static CallToolResult successResult(String text) {
         return CallToolResult.builder()
                 .content(List.of(new TextContent(text)))
@@ -276,6 +314,7 @@ public class WeatherMcpExecutor {
                 .build();
     }
 
+    /** 构造协议级错误结果，让上游模型明确本次查询不可用。 */
     private static CallToolResult errorResult(String message) {
         return CallToolResult.builder()
                 .content(List.of(new TextContent(message)))
@@ -283,6 +322,7 @@ public class WeatherMcpExecutor {
                 .build();
     }
 
+    /** 天气模拟算法的内部数据载体，不直接暴露为 MCP 工具输出。 */
     private static class WeatherData {
         String weatherType;
         int currentTemp;

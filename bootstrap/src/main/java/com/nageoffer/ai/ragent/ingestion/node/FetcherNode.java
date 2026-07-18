@@ -36,28 +36,39 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 文档获取节点 (Fetcher Node)
- * 数据摄取负责从多元化的存储介质（如 Local FS、HTTP/HTTPS、OSS 等）中检索并载入文档原始字节流
- * 核心逻辑采用策略模式 (Strategy Pattern) 实现，根据 {@link SourceType} 动态路由至具体的 {@link DocumentFetcher}
- * 具备幂等性检查机制：若上下文中已预置原始字节，则自动跳过获取流程，避免重复 I/O
+ * 摄取流水线的原始文档获取节点。
+ *
+ * <p>它将不同来源统一为 {@code rawBytes + mimeType + fileName} 写回 IngestionContext。策略模式将来源协议隔离在
+ * DocumentFetcher 实现中；节点本身只负责路由、幂等跳过和上下文字段更新。</p>
  */
 @Component
 public class FetcherNode implements IngestionNode {
 
+    /** SourceType 到抓取策略的只读索引，应用启动时由 Spring 注入的所有实现构建。 */
     private final Map<SourceType, DocumentFetcher> fetchers;
 
+    /**
+     * 收集所有 DocumentFetcher Bean 并按支持的来源类型建立路由表。
+     * 新增来源只需新增实现；若两个实现声明同一类型，toMap 会在启动时暴露配置错误。
+     */
     public FetcherNode(List<DocumentFetcher> fetchers) {
         this.fetchers = fetchers.stream()
                 .collect(Collectors.toMap(DocumentFetcher::supportedType, Function.identity()));
     }
 
     @Override
+    /** @return 管道中与数据库配置对应的 fetcher 节点类型字符串。 */
     public String getNodeType() {
         return IngestionNodeType.FETCHER.getValue();
     }
 
     @Override
+    /**
+     * 获取原始字节并更新上下文。
+     * 已由上传入口预置 rawBytes 时只补 MIME 类型，不再次访问外部来源，保证重试和上传链路不会重复 I/O。
+     */
     public NodeResult execute(IngestionContext context, NodeConfig config) {
+        // 上传文件等入口已将字节放入上下文，直接复用并确保后续 ParserNode 有 MIME 类型可判断。
         if (context.getRawBytes() != null && context.getRawBytes().length > 0) {
             if (!StringUtils.hasText(context.getMimeType())) {
                 String fileName = context.getSource() == null ? null : context.getSource().getFileName();
@@ -66,21 +77,25 @@ public class FetcherNode implements IngestionNode {
             return NodeResult.ok("已跳过获取器：原始字节已存在");
         }
 
+        // 非预置字节场景必须有来源类型和位置，才能选择具体抓取策略。
         DocumentSource source = context.getSource();
         if (source == null || source.getType() == null) {
             return NodeResult.fail(new ClientException("文档来源不能为空"));
         }
 
+        // 由 SourceType 找策略，避免在节点内堆积 if/else 协议分支。
         DocumentFetcher fetcher = fetchers.get(source.getType());
         if (fetcher == null) {
             return NodeResult.fail(new ClientException("不支持的来源类型: " + source.getType()));
         }
 
+        // 策略返回统一结果；节点负责写回共享上下文，供 Parser/Chunker/Indexer 连续消费。
         FetchResult result = fetcher.fetch(source);
         context.setRawBytes(result.content());
         if (StringUtils.hasText(result.mimeType())) {
             context.setMimeType(result.mimeType());
         }
+        // 抓取器可能从响应头或 URI 推断文件名，写回 Source 供后续日志与文档记录复用。
         if (StringUtils.hasText(result.fileName())) {
             source.setFileName(result.fileName());
         }

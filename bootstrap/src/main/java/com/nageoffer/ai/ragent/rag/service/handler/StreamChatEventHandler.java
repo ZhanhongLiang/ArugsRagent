@@ -98,6 +98,7 @@ public class StreamChatEventHandler implements StreamCallback {
      * 让停止请求能找到本 SSE sender，并在取消时保存已累积内容。</p>
      */
     private void initialize() {
+        // 发送消息给客户端
         sender.sendEvent(SSEEventType.META.value(), new MetaPayload(conversationId, taskId));
         taskManager.register(taskId, sender, this::buildCompletionPayloadOnCancel);
     }
@@ -254,6 +255,7 @@ public class StreamChatEventHandler implements StreamCallback {
                 count = 0;
             }
         }
+        // 增量添加信息
         if (!buffer.isEmpty()) {
             sender.sendEvent(SSEEventType.MESSAGE.value(), new MessageDelta(type, buffer.toString()));
         }

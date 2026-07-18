@@ -19,6 +19,7 @@ package com.nageoffer.ai.ragent.rag.core.retrieve.channel;
 
 import cn.hutool.core.collection.CollUtil;
 import com.nageoffer.ai.ragent.framework.convention.RetrievedChunk;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.rag.config.SearchChannelProperties;
 import com.nageoffer.ai.ragent.rag.core.intent.NodeScore;
 import com.nageoffer.ai.ragent.rag.core.intent.NodeScoreFilters;
@@ -43,13 +44,15 @@ import java.util.concurrent.Executor;
 public class IntentDirectedSearchChannel implements SearchChannel {
 
     private final SearchChannelProperties properties;
-    private final IntentParallelRetriever parallelRetriever;
+    private final RetrieverService retrieverService;
+    private final Executor innerRetrievalExecutor;
 
     public IntentDirectedSearchChannel(RetrieverService retrieverService,
                                        SearchChannelProperties properties,
                                        Executor innerRetrievalExecutor) {
         this.properties = properties;
-        this.parallelRetriever = new IntentParallelRetriever(retrieverService, innerRetrievalExecutor);
+        this.retrieverService = retrieverService;
+        this.innerRetrievalExecutor = innerRetrievalExecutor;
     }
 
     @Override
@@ -118,7 +121,8 @@ public class IntentDirectedSearchChannel implements SearchChannel {
                     context.getMainQuestion(),
                     kbIntents,
                     context.getTopK(),
-                    topKMultiplier
+                    topKMultiplier,
+                    context.getAccessScope()
             );
 
             long latency = System.currentTimeMillis() - startTime;
@@ -161,7 +165,10 @@ public class IntentDirectedSearchChannel implements SearchChannel {
         List<NodeScore> allScores = context.getIntents().stream()
                 .flatMap(si -> si.nodeScores().stream())
                 .toList();
-        return NodeScoreFilters.kb(allScores, minScore);
+        return NodeScoreFilters.kb(allScores, minScore).stream()
+                .filter(score -> context.getAccessScope() == null
+                        || context.getAccessScope().canReadCollection(score.getNode().getCollectionName()))
+                .toList();
     }
 
     /**
@@ -176,8 +183,10 @@ public class IntentDirectedSearchChannel implements SearchChannel {
     private List<RetrievedChunk> retrieveByIntents(String question,
                                                    List<NodeScore> kbIntents,
                                                    int fallbackTopK,
-                                                   int topKMultiplier) {
+                                                   int topKMultiplier,
+                                                   KnowledgeAccessScope accessScope) {
         // 使用模板方法执行并行检索
-        return parallelRetriever.executeParallelRetrieval(question, kbIntents, fallbackTopK, topKMultiplier);
+        return new IntentParallelRetriever(retrieverService, innerRetrievalExecutor, accessScope)
+                .executeParallelRetrieval(question, kbIntents, fallbackTopK, topKMultiplier);
     }
 }

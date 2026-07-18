@@ -17,5 +17,11 @@
 
 package com.nageoffer.ai.ragent.knowledge.schedule;
 
+/**
+ * 一次调度锁持有权的不可变凭证。
+ *
+ * @param scheduleId 被锁定的调度任务 id
+ * @param lockToken 本实例本次抢锁生成的随机 token；续租、释放和状态写回必须携带它防止误操作后来持锁者
+ */
 public record ScheduleLockLease(String scheduleId, String lockToken) {
 }

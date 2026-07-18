@@ -65,6 +65,7 @@ public interface ConversationMemoryService {
      */
     default List<ChatMessage> loadAndAppend(String conversationId, String userId, ChatMessage message) {
         List<ChatMessage> history = load(conversationId, userId);
+        // append是添加当前的用户问题那一条到历史中，并且异步触发压缩摘要
         append(conversationId, userId, message);
         return history;
     }

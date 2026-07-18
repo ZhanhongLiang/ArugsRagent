@@ -38,8 +38,10 @@ import java.util.stream.Collectors;
 import static com.nageoffer.ai.ragent.rag.constant.RAGConstant.GUIDANCE_AMBIGUITY_CHECK_PROMPT_PATH;
 
 /**
- * LLM 歧义确认器
- * 仅在规则层无法明确判断时调用，通过 LLM 语义理解确认是否存在品类歧义
+ * 规则阈值无法定论时的 LLM 歧义确认器。
+ *
+ * <p>它不参与正常意图分类，只比较已排序的候选节点是否需要用户补充条件；
+ * 因此只在阈值缓冲区调用，以避免每个问题都额外增加一次模型请求。</p>
  */
 @Slf4j
 @Component
@@ -50,18 +52,13 @@ public class AmbiguityLLMChecker {
     private final PromptTemplateLoader promptTemplateLoader;
 
     /**
-     * - 低 Temperature（0.1）+ 低 Top-P（0.3）**：歧义判断需要确定性输出，不需要创造力
-     * - **关闭 thinking**：不需要 CoT 推理，只需要一个布尔判断
-     * - **降级策略**：LLM 调用失败时返回 `true`（触发引导）。宁可多问一句，不可误走错品类
-     * LLM 调用可能因为网络超时、模型过载等原因失败。降级时有两个选择：
+     * 确认候选意图是否语义上难以区分。
      *
-     * - 返回 `false`（不触发引导）：用户问题可能真的有歧义，系统强行走最高分品类，给出错误答案
-     * - 返回 `true`（触发引导）：多问一句，用户多点一下，但不会给错答案
-     *
-     * 引导的代价是多一轮交互，不引导的代价可能是答非所问。从用户体验角度，宁可多问不可答错，所以降级策略选择触发引导。
-     * 调用 LLM 确认是否存在歧义
+     * <p>低温度、低 Top-P 且关闭思考模式，目标是稳定输出 JSON 布尔值而非生成开放性回答。
+     * 解析或调用失败时返回 {@code true}：多一轮澄清的代价小于错误路由后答非所问的代价。</p>
      */
     public boolean checkAmbiguity(String question, List<NodeScore> ranked) {
+        // 只传候选节点的可解释信息，避免让确认模型重新遍历整棵意图树。
         String candidatesText = buildCandidatesText(ranked);
         String prompt = promptTemplateLoader.render(
                 GUIDANCE_AMBIGUITY_CHECK_PROMPT_PATH,
@@ -81,13 +78,14 @@ public class AmbiguityLLMChecker {
                 .build();
 
         try {
+            // 模型偶尔会把 JSON 包进 Markdown 代码块，先清理围栏再做严格 JSON 解析。
             String raw = llmService.chat(request);
             String cleaned = LLMResponseCleaner.stripMarkdownCodeFence(raw);
             JsonElement root = JsonParser.parseString(cleaned);
 
             if (!root.isJsonObject()) {
                 log.warn("歧义确认 LLM 返回非 JSON 对象: {}", raw);
-                return true;
+                return true; // 非预期结构无法可靠判定，保守地要求澄清。
             }
 
             JsonObject obj = root.getAsJsonObject();
@@ -99,7 +97,7 @@ public class AmbiguityLLMChecker {
             }
 
             log.warn("歧义确认 LLM 返回缺少 ambiguous 字段: {}", raw);
-            return true;
+            return true; // 缺少关键字段同样按不确定处理。
         } catch (Exception e) {
             log.warn("歧义确认 LLM 调用失败, 降级为触发澄清, question={}", question, e);
             return true;
@@ -107,6 +105,7 @@ public class AmbiguityLLMChecker {
     }
 
     private String buildCandidatesText(List<NodeScore> ranked) {
+        // 路径能帮助模型区分同名但属于不同业务领域的叶子节点。
         return ranked.stream()
                 .map(ns -> {
                     IntentNode node = ns.getNode();

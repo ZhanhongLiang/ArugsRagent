@@ -17,16 +17,14 @@
 
 package com.nageoffer.ai.ragent.rag.core.intent;
 
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import java.util.List;
 
 /**
- * 意图分类器接口
- * <p>
- * 支持两种实现策略：
- * <ul>
- *     <li>串行分类：所有意图在单次 LLM 调用中完成识别（适用于意图数量较少场景）</li>
- *     <li>并行分类：按 Domain 拆分意图，并行调用多个 LLM 完成识别（适用于意图数量多场景）</li>
- * </ul>
+ * 将用户问题映射为意图树叶子节点的分类抽象。
+ *
+ * <p>实现可采用一次 LLM 打分或按领域并行打分；调用方只依赖按分数降序的统一结果，
+ * 再用阈值和数量上限控制后续检索或工具调用范围。</p>
  */
 public interface IntentClassifier {
 
@@ -39,6 +37,13 @@ public interface IntentClassifier {
     List<NodeScore> classifyTargets(String question);
 
     /**
+     * 使用请求级数据权限快照进行分类；旧实现无需立即修改。
+     */
+    default List<NodeScore> classifyTargets(String question, KnowledgeAccessScope accessScope) {
+        return classifyTargets(question);
+    }
+
+    /**
      * 取前 topN 个且 score >= minScore 的分类
      *
      * @param question 用户问题
@@ -47,6 +52,7 @@ public interface IntentClassifier {
      * @return 过滤后的节点打分列表
      */
     default List<NodeScore> topKAboveThreshold(String question, int topN, double minScore) {
+        // 先过滤低置信候选再截断，避免低分节点占用有限的意图名额。
         return classifyTargets(question).stream()
                 .filter(ns -> ns.getScore() >= minScore)
                 .limit(topN)

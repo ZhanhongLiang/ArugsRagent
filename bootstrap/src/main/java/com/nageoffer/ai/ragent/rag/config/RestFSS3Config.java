@@ -30,8 +30,10 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import java.net.URI;
 
 /**
- * RustFS S3 客户端配置类
- * 用于配置和初始化与 RustFS 对象存储服务交互的 S3 客户端
+ * RustFS/MinIO 等 S3 兼容对象存储的客户端装配。
+ *
+ * 服务端读写和预签名 URL 分别使用 {@link S3Client}、{@link S3Presigner}；
+ * 两者必须使用同一 endpoint、凭证和 path-style 设置，否则生成的 URL 无法被兼容服务识别。
  */
 @Configuration
 public class RestFSS3Config {
@@ -40,6 +42,7 @@ public class RestFSS3Config {
     public S3Client s3Client(@Value("${rustfs.url}") String rustfsUrl,
                              @Value("${rustfs.access-key-id}") String accessKeyId,
                              @Value("${rustfs.secret-access-key}") String secretAccessKey) {
+        // endpointOverride 指向自托管 S3 兼容服务，而非 AWS 公网端点。
         return S3Client.builder()
                 .endpointOverride(URI.create(rustfsUrl))
                 .region(Region.US_EAST_1)
@@ -48,13 +51,13 @@ public class RestFSS3Config {
                                 AwsBasicCredentials.create(accessKeyId, secretAccessKey)
                         )
                 )
+                // 兼容服务通常以 /bucket/key 识别请求，不能依赖 AWS 的虚拟主机桶名形式。
                 .forcePathStyle(true)
                 .build();
     }
 
     /**
-     * S3 预签名器，用于生成预签名 URL
-     * 签名在 URL query 参数中完成，配合 HttpURLConnection 实现零堆内存的流式文件上传
+     * S3 预签名器，用于生成短期带签名 URL；签名在 query 参数中完成，客户端可直连对象存储传输文件。
      */
     @Bean
     public S3Presigner s3Presigner(@Value("${rustfs.url}") String rustfsUrl,
@@ -68,6 +71,7 @@ public class RestFSS3Config {
                                 AwsBasicCredentials.create(accessKeyId, secretAccessKey)
                         )
                 )
+                // Presigner 同样必须开启路径风格，保证签名中的请求路径和实际请求一致。
                 .serviceConfiguration(S3Configuration.builder()
                         .pathStyleAccessEnabled(true)
                         .build())

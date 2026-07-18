@@ -23,7 +23,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 每个叶子分类节点对应的 LLM 匹配分数
+ * 一个意图节点及其与当前问题的匹配分数。
+ *
+ * <p>分数只是分类模型的相对置信信号，并非最终答案质量；
+ * 后续会结合阈值、歧义策略和节点类型决定是否检索、调用工具或要求澄清。</p>
  */
 @NoArgsConstructor
 @AllArgsConstructor
@@ -37,7 +40,7 @@ public class NodeScore {
     private IntentNode node;
 
     /**
-     * 打分结果
+     * 分类模型给出的匹配分数，通常按降序排序后使用。
      */
     private double score;
 }

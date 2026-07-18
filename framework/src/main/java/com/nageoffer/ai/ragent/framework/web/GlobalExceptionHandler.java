@@ -46,9 +46,11 @@ import java.util.Optional;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /** 单文件上传上限，用于把底层异常转换为对用户可理解的提示。 */
     @Value("${spring.servlet.multipart.max-file-size:50MB}")
     private String maxFileSize;
 
+    /** 单次 multipart 请求总大小上限。 */
     @Value("${spring.servlet.multipart.max-request-size:100MB}")
     private String maxRequestSize;
 
@@ -58,6 +60,7 @@ public class GlobalExceptionHandler {
     @SneakyThrows
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public Result<Void> validExceptionHandler(HttpServletRequest request, MethodArgumentNotValidException ex) {
+        // Spring 会把每个字段校验失败封装为 FieldError，这里只返回第一个可读错误。
         BindingResult bindingResult = ex.getBindingResult();
         FieldError firstFieldError = CollectionUtil.getFirst(bindingResult.getFieldErrors());
         String exceptionStr = Optional.ofNullable(firstFieldError)
@@ -73,9 +76,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = {AbstractException.class})
     public Result<Void> abstractException(HttpServletRequest request, AbstractException ex) {
         if (ex.getCause() != null) {
+            // 有底层原因时保留完整异常链，方便排查远程调用或数据库问题。
             log.error("[{}] {} [ex] {}", request.getMethod(), request.getRequestURL().toString(), ex, ex.getCause());
             return Results.failure(ex);
         }
+        // 无 cause 时只整理前五层栈帧，日志可读且避免重复输出超长堆栈。
         StringBuilder stackTraceBuilder = new StringBuilder();
         stackTraceBuilder.append(ex.getClass().getName()).append(": ").append(ex.getErrorMessage()).append("\n");
         StackTraceElement[] stackTrace = ex.getStackTrace();
@@ -113,8 +118,10 @@ public class GlobalExceptionHandler {
         String message;
         if (ex.getCause() instanceof IllegalStateException
                 && ex.getCause().getCause() instanceof FileSizeLimitExceededException) {
+            // Tomcat 的该异常链表示“单个文件”超过 max-file-size。
             message = "上传文件大小超过限制，单个文件最大允许 " + maxFileSize;
         } else {
+            // 其余情况通常是多个文件合计超过 max-request-size。
             message = "上传请求大小超过限制，单次请求最大允许 " + maxRequestSize;
         }
         return Results.failure(BaseErrorCode.CLIENT_ERROR.code(), message);
@@ -131,8 +138,10 @@ public class GlobalExceptionHandler {
 
     private String getUrl(HttpServletRequest request) {
         if (StrUtil.isBlank(request.getQueryString())) {
+            // 无查询参数时直接返回路径，避免日志末尾多余问号。
             return request.getRequestURL().toString();
         }
+        // 有查询参数时完整记录，便于复现客户端请求。
         return request.getRequestURL().toString() + "?" + request.getQueryString();
     }
 }

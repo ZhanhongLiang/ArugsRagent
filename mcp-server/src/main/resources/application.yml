@@ -2,5 +2,11 @@ server:
   port: 9099
 
 spring:
+  config:
+    import: optional:classpath:application-local.yml
   application:
     name: ragent-mcp-server
+
+amap:
+  connection-timeout-ms: 3000
+  request-timeout-ms: 5000

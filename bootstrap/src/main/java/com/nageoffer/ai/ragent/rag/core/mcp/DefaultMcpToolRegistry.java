@@ -52,6 +52,7 @@ public class DefaultMcpToolRegistry implements McpToolRegistry {
 
     /**
      * 启动时自动注册所有发现的执行器
+     *  启动的时候，就会自动注册
      */
     @PostConstruct
     public void init() {

@@ -86,6 +86,7 @@ public class StreamChatTraceRunner {
                 .build());
 
         Date runStartTime = new Date(startMillis);
+        // 这里传入的callback是StreamChatEventHandler
         StreamCallback traceAwareCallback = new ForwardingStreamCallback(callback) {
             @Override
             protected void onFirstContent() {

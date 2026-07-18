@@ -78,7 +78,7 @@ public class SseEmitterSender {
                 emitter.send(data);
                 return;
             }
-            emitter.send(SseEmitter.event().name(eventName).data(data));
+            emitter.send(SseEmitter.event().name(eventName).data(data)); // 发送给客户端，拒绝也要发送的
         } catch (Exception e) {
             fail(e);
         }

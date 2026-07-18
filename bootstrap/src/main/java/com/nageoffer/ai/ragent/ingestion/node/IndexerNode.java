@@ -46,21 +46,28 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 索引节点类，负责将处理后的文档分块数据索引到向量数据库中
- * 该类实现了 {@link IngestionNode} 接口，是数据摄入流水线中的关键节点
- * 主要功能包括：解析配置、生成向量嵌入、确保向量空间存在以及将数据批量插入到 Milvus 等向量数据库
+ * 将已向量化 Chunk 持久化到目标向量空间的索引节点。
+ *
+ * <p>节点不再调用模型生成 Embedding，而是严格校验 Chunk 中已有向量的维度；随后确保向量空间存在，
+ * 合并元数据并交给抽象 VectorStoreService 写入，因而可以兼容 PgVector、Milvus 等实现。</p>
  */
 @Slf4j
 @Component
 public class IndexerNode implements IngestionNode {
 
+    /** 将任意扩展元数据安全转换为 JSON 元素。 */
     private static final Gson GSON = new Gson();
 
+    /** 将节点配置转换为 IndexerSettings。 */
     private final ObjectMapper objectMapper;
+    /** 查询或创建向量空间的管理端口。 */
     private final VectorStoreAdmin vectorStoreAdmin;
+    /** 实际批量写入 Chunk 的向量存储端口。 */
     private final VectorStoreService vectorStoreService;
+    /** 未指定 VectorSpaceId 时使用的默认集合名与向量维度。 */
     private final RAGDefaultProperties ragDefaultProperties;
 
+    /** 注入配置、向量空间管理与向量写入依赖。 */
     public IndexerNode(ObjectMapper objectMapper,
                        VectorStoreAdmin vectorStoreAdmin,
                        VectorStoreService vectorStoreService,
@@ -71,11 +78,16 @@ public class IndexerNode implements IngestionNode {
         this.ragDefaultProperties = ragDefaultProperties;
     }
 
+    /** @return indexer 节点类型。 */
     @Override
     public String getNodeType() {
         return IngestionNodeType.INDEXER.getValue();
     }
 
+    /**
+     * 校验 Chunk 向量、定位集合、确保空间存在，构造存储行后执行或跳过真实写入。
+     * skipIndexerWrite 支持上层在更大事务边界内自行协调数据库状态与向量提交。
+     */
     @Override
     public NodeResult execute(IngestionContext context, NodeConfig config) {
         List<VectorChunk> chunks = context.getChunks();
@@ -88,6 +100,7 @@ public class IndexerNode implements IngestionNode {
             return NodeResult.fail(new ClientException("索引器需要指定集合名称"));
         }
 
+        // 先确定期望维度，再逐块验证，防止不同模型或损坏向量混入同一空间。
         int expectedDim = resolveDimension(chunks);
         if (expectedDim <= 0) {
             return NodeResult.fail(new ClientException("未配置向量维度"));
@@ -99,6 +112,7 @@ public class IndexerNode implements IngestionNode {
             return NodeResult.fail(ex);
         }
 
+        // 首次写入时懒创建向量空间，已存在时不重复创建。
         ensureVectorSpace(collectionName);
         List<JsonObject> rows = buildRows(context, chunks, vectorArray, settings.getMetadataFields());
 
@@ -111,6 +125,7 @@ public class IndexerNode implements IngestionNode {
         return NodeResult.ok("已写入 " + rows.size() + " 个分块到集合 " + collectionName);
     }
 
+    /** 空节点设置使用默认 IndexerSettings，避免配置缺失阻断基本写入。 */
     private IndexerSettings parseSettings(JsonNode node) {
         if (node == null || node.isNull()) {
             return IndexerSettings.builder().build();
@@ -118,6 +133,7 @@ public class IndexerNode implements IngestionNode {
         return objectMapper.convertValue(node, IndexerSettings.class);
     }
 
+    /** VectorSpaceId 显式指定集合时优先使用，否则回退到 RAG 默认集合。 */
     private String resolveCollectionName(IngestionContext context) {
         if (context.getVectorSpaceId() != null && StringUtils.hasText(context.getVectorSpaceId().getLogicalName())) {
             return context.getVectorSpaceId().getLogicalName();
@@ -125,6 +141,7 @@ public class IndexerNode implements IngestionNode {
         return ragDefaultProperties.getCollectionName();
     }
 
+    /** 检查向量空间存在性，不存在时以最小规范创建。 */
     private void ensureVectorSpace(String collectionName) {
         boolean vectorSpaceExists = vectorStoreAdmin.vectorSpaceExists(VectorSpaceId.builder()
                 .logicalName(collectionName)
@@ -142,12 +159,16 @@ public class IndexerNode implements IngestionNode {
         vectorStoreAdmin.ensureVectorSpace(spaceSpec);
     }
 
+    /**
+     * 将中间 JSON 行重新转换为 VectorChunk，再通过统一存储端口批量写入。
+     * JSON 行主要用于统一处理元数据和跳写场景，存储接口仍以领域 VectorChunk 为输入。
+     */
     private void insertRows(String collectionName, String docId, List<JsonObject> rows) {
         if (rows == null || rows.isEmpty()) {
             return;
         }
 
-        // 将 JsonObject 转换为 VectorChunk 列表
+        // 只还原向量存储必需字段；metadata 已在 buildRows 中用于构造写入行和日志。
         List<VectorChunk> chunks = rows.stream().map(row -> {
             String chunkId = row.get("id").getAsString();
             String content = row.get("content").getAsString();
@@ -178,6 +199,7 @@ public class IndexerNode implements IngestionNode {
         log.info("向量写入成功，集合={}，行数={}", collectionName, chunks.size());
     }
 
+    /** 优先使用全局配置维度；未配置时从第一条有效 Chunk 向量推断。 */
     private int resolveDimension(List<VectorChunk> chunks) {
         Integer configured = ragDefaultProperties.getDimension();
         if (configured != null && configured > 0) {
@@ -191,6 +213,10 @@ public class IndexerNode implements IngestionNode {
         return 0;
     }
 
+    /**
+     * 提取每个 Chunk 的向量并做完整性、维度一致性检查。
+     * 一条异常向量会让任务失败，避免部分写入后形成不可检索或分数不可比的集合。
+     */
     private float[][] toArrayFromChunks(List<VectorChunk> chunks, int expectedDim) {
         float[][] out = new float[chunks.size()][];
         for (int i = 0; i < chunks.size(); i++) {
@@ -206,6 +232,10 @@ public class IndexerNode implements IngestionNode {
         return out;
     }
 
+    /**
+     * 为每个 Chunk 生成存储行，补齐 chunkId、基础追踪元数据和配置允许的扩展元数据。
+     * content 保留原始文本而不是可能被预处理过的 embedding 输入，确保检索命中后可向用户展示原文。
+     */
     private List<JsonObject> buildRows(IngestionContext context,
                                        List<VectorChunk> chunks,
                                        float[][] vectors,
@@ -218,7 +248,7 @@ public class IndexerNode implements IngestionNode {
             chunk.setChunkId(chunkId);
             chunk.setEmbedding(vectors[i]);
 
-            // 使用原始内容作为存储内容，而不是用于embedding的文本
+            // 使用原始内容作为存储内容，而不是用于 embedding 的预处理文本。
             String content = chunk.getContent() == null ? "" : chunk.getContent();
             if (content.length() > 65535) {
                 content = content.substring(0, 65535);
@@ -236,6 +266,7 @@ public class IndexerNode implements IngestionNode {
                 metadata.addProperty("source_location", source.getLocation());
             }
 
+            // 只写入管道配置允许的扩展字段，避免整份 Context 元数据无限膨胀到向量库。
             if (metadataFields != null && !metadataFields.isEmpty()) {
                 Map<String, Object> combined = new HashMap<>(mergedMetadata);
                 if (chunk.getMetadata() != null) {
@@ -262,6 +293,7 @@ public class IndexerNode implements IngestionNode {
         return rows;
     }
 
+    /** 复制上下文元数据，防止构造存储行时修改共享 Context 的原始 Map。 */
     private Map<String, Object> mergeMetadata(IngestionContext context) {
         Map<String, Object> merged = new HashMap<>();
         if (context.getMetadata() != null) {
@@ -270,11 +302,13 @@ public class IndexerNode implements IngestionNode {
         return merged;
     }
 
+    /** 用 Gson 通用序列化扩展字段，支持字符串、数字、列表和嵌套对象。 */
     private void addMetadataValue(JsonObject metadata, String field, Object value) {
         JsonElement element = GSON.toJsonTree(value);
         metadata.add(field, element);
     }
 
+    /** 将 float 向量转换为 JSON 数组，供统一的中间存储行结构使用。 */
     private JsonArray toJsonArray(float[] vector) {
         JsonArray arr = new JsonArray(vector.length);
         for (float v : vector) {

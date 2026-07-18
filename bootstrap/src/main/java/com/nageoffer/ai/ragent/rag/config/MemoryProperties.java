@@ -26,9 +26,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * 记忆配置属性类
- * 用于配置 RAG 系统中的对话记忆管理相关参数
- * 包括历史轮数保留、缓存时间、摘要压缩等功能的配置
+ * 多轮对话记忆的容量与压缩策略配置。
+ *
+ * 最近轮次保留原文以保证追问精度，较早内容可压缩成摘要以控制 Prompt Token 成本。
  */
 @Data
 @Configuration
@@ -45,12 +45,12 @@ public class MemoryProperties {
     private Integer historyKeepTurns = 8;
 
     /**
-     * 是否启用对话记忆压缩
+     * 是否启用旧轮次摘要压缩；关闭时只由 historyKeepTurns 控制保留范围。
      */
     private Boolean summaryEnabled = false;
 
     /**
-     * 开始摘要的轮数阈值
+     * 用户轮数达到该阈值后才开始生成摘要，通常应大于原文保留轮数。
      */
     private Integer summaryStartTurns = 9;
 

@@ -21,16 +21,21 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** 当前已登录用户的安全展示视图，不包含密码或其他认证敏感字段。 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class CurrentUserVO {
 
+    /** 当前登录主体 id。 */
     private String userId;
 
+    /** 用户名。 */
     private String username;
 
+    /** 角色代码。 */
     private String role;
 
+    /** 头像地址。 */
     private String avatar;
 }

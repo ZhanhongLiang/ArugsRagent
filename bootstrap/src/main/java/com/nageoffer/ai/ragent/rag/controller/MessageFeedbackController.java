@@ -28,7 +28,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 会话消息反馈控制器
+ * 提交助手消息评价的异步入口。
+ *
+ * <p>接口只投递反馈事件，实际幂等写入由消息消费者完成，
+ * 避免用户点击评价时等待消息数据库事务。</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -42,6 +45,7 @@ public class MessageFeedbackController {
     @PostMapping("/conversations/messages/{messageId}/feedback")
     public Result<Void> submitFeedback(@PathVariable String messageId,
                                        @RequestBody MessageFeedbackRequest request) {
+        // messageId 来自路径，评价类型和可选备注来自请求体。
         feedbackService.submitFeedbackAsync(messageId, request);
         return Results.success();
     }

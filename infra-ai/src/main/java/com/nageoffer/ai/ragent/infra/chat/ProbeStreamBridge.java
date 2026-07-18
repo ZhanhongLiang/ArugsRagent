@@ -38,17 +38,22 @@ import java.util.concurrent.TimeoutException;
  */
 public final class ProbeStreamBridge implements StreamCallback {
 
-    // 真实业务回调。commit 前不直接调用它，避免失败供应商的残片推给前端。
+    /** 真实业务回调；首包确认前不直接调用，避免失败供应商的残片推给前端。 */
     private final StreamCallback downstream;
-    // 首包信号。异步读取线程 complete，路由线程 get/timeout 等待。
+    /** 首包探测信号：异步读取线程 complete，路由线程通过 get/timeout 等待。 */
     private final CompletableFuture<ProbeResult> probe = new CompletableFuture<>();
-    // 保护 buffer 与 committed 的同一把锁，避免事件丢失、并发修改和乱序。
+    /** 同时保护缓冲区与提交标志，避免并发回调导致事件丢失或乱序。 */
     private final Object lock = new Object();
-    // commit 前的回调动作缓冲区；lambda 捕获具体 downstream 调用，commit 时顺序执行。
+    /** 首包确认前的回调动作缓冲区，提交时按原接收顺序执行。 */
     private final List<Runnable> buffer = new ArrayList<>();
-    // committed=false 表示探测阶段；true 表示已确认供应商可用，后续事件直通。
+    /** false 为探测阶段；true 表示模型已确认可用，后续事件直接转发。 */
     private volatile boolean committed;
 
+    /**
+     * 创建首包桥接器并保存最终要接收事件的业务回调。
+     *
+     * @param downstream 真正负责保存消息、发送 SSE 的下游回调
+     */
     ProbeStreamBridge(StreamCallback downstream) {
         this.downstream = downstream;
     }
@@ -140,33 +145,47 @@ public final class ProbeStreamBridge implements StreamCallback {
     @Getter
     public static class ProbeResult {
 
+        /** 首包探测的四种终态：可用、报错、超时和无内容结束。 */
         enum Type {SUCCESS, ERROR, TIMEOUT, NO_CONTENT}
 
+        /** 本次探测的终态类型。 */
         private final Type type;
+        /** 供应商首包前报错时保留的原始异常；其他终态为 null。 */
         private final Throwable error;
 
+        /**
+         * 创建不可变探测结果。
+         *
+         * @param type 探测终态
+         * @param error 失败异常，可为空
+         */
         private ProbeResult(Type type, Throwable error) {
             this.type = type;
             this.error = error;
         }
 
         static ProbeResult success() {
+            // 收到内容或思考增量，说明当前候选模型可提交。
             return new ProbeResult(Type.SUCCESS, null);
         }
 
         static ProbeResult error(Throwable t) {
+            // 首包前异常交由上层决定是否切换候选模型。
             return new ProbeResult(Type.ERROR, t);
         }
 
         static ProbeResult timeout() {
+            // 在路由定义的时间窗口内没有收到任何有效信号。
             return new ProbeResult(Type.TIMEOUT, null);
         }
 
         static ProbeResult noContent() {
+            // 流正常结束却没有任何内容，不应把空回复视为模型可用。
             return new ProbeResult(Type.NO_CONTENT, null);
         }
 
         boolean isSuccess() {
+            // 只有 SUCCESS 会触发 bridge.commit()。
             return type == Type.SUCCESS;
         }
     }

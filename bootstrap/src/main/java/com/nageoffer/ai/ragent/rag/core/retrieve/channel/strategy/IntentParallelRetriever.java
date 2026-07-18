@@ -18,6 +18,7 @@
 package com.nageoffer.ai.ragent.rag.core.retrieve.channel.strategy;
 
 import com.nageoffer.ai.ragent.framework.convention.RetrievedChunk;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.rag.core.intent.IntentNode;
 import com.nageoffer.ai.ragent.rag.core.intent.NodeScore;
 import com.nageoffer.ai.ragent.rag.core.retrieve.RetrieveRequest;
@@ -29,34 +30,37 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
- * 意图并行检索器
- * 继承模板类，实现意图特定的检索逻辑
+ * 按意图节点并发执行向量检索的策略。
+ *
+ * <p>意图节点绑定的 collectionName 是路由结果，不能用一个全局集合替代；
+ * 本类把每个命中的知识库意图转换为独立任务，再由父类统一并发、容错和汇总。</p>
  */
 @Slf4j
 public class IntentParallelRetriever extends AbstractParallelRetriever<IntentParallelRetriever.IntentTask> {
 
     private final RetrieverService retrieverService;
+    private final KnowledgeAccessScope accessScope;
 
+    /**
+     * 单个意图的检索任务。
+     * intentTopK 在提交前已计算完成，避免异步线程读取变化中的配置或重复计算。
+     */
     public record IntentTask(NodeScore nodeScore, int intentTopK) {
     }
 
     public IntentParallelRetriever(RetrieverService retrieverService,
-                                   Executor executor) {
+                                   Executor executor,
+                                   KnowledgeAccessScope accessScope) {
         super(executor);
         this.retrieverService = retrieverService;
+        this.accessScope = accessScope;
     }
 
     /**
-     * 执行并行检索（重载方法，支持动态 TopK 计算）
-     *     /**
-     *      * 根据意图列表并行检索
-     *      * `retrieveByIntents` 内部是 `IntentParallelRetriever`，它对每个 KB 意图做一件事：
-     *      * **取 `IntentNode.collectionName`，在对应的 Milvus Collection 中做向量检索。**
-     *      *
-     *      * 回忆第 5 篇讲过的 `IntentNode` 字段——每个 KB 类叶子节点绑定了一个 `collectionName`（如 `kb_1997857139737882625`），
-     *      * 这个 Collection 就是这个意图对应的知识库在向量数据库中的存储位置。意图定向检索的精确性就来自这里：
-     *      * 不是搜全库，而是只搜命中意图绑定的那个 Collection。
+     * 为每个意图计算召回数量后并发检索。
      *
+     * <p>节点自身配置了 TopK 时优先使用节点值；否则回退到请求级 TopK。
+     * 倍率用于先多召回候选，留给后置去重和重排序阶段筛选，而不是最终直接输出这么多片段。</p>
      */
     public List<RetrievedChunk> executeParallelRetrieval(String question,
                                                          List<NodeScore> targets,
@@ -65,31 +69,34 @@ public class IntentParallelRetriever extends AbstractParallelRetriever<IntentPar
         List<IntentTask> intentTasks = targets.stream()
                 .map(nodeScore -> new IntentTask(
                         nodeScore,
-                        resolveIntentTopK(nodeScore, fallbackTopK, topKMultiplier) // 计算TopK * 倍数
+                        resolveIntentTopK(nodeScore, fallbackTopK, topKMultiplier)
                 ))
                 .toList();
         return super.executeParallelRetrieval(question, intentTasks, fallbackTopK);
     }
     /**
-     * 创建单个检索任务（子类实现）
-     * 注意：此方法内部应包含异常处理，失败时返回空列表
+     * 在一个意图绑定的集合中执行实际检索。
      *
-     * @param question 查询问题
-     * @param task   检索目标
-     * @param ignoredTopK     TopK
-     * @return 检索结果列表
+     * <p>这里捕获异常并返回空列表，是为了将单个集合不可用降级为局部召回缺失，
+     * 而不是让所有并行子任务和整次问答一起失败。</p>
+     *
+     * @param question 用户问题或重写后的检索语句
+     * @param task 已确定集合和召回数量的意图任务
+     * @param ignoredTopK 父类模板参数；实际数量以 task.intentTopK 为准
+     * @return 当前意图集合召回到的文档分块
      */
     @Override
     protected List<RetrievedChunk> createRetrievalTask(String question, IntentTask task, int ignoredTopK) {
         NodeScore nodeScore = task.nodeScore();
         IntentNode node = nodeScore.getNode();
         try {
-            // 进行PG向量检索
+            // collectionName 将语义意图映射到实际向量集合，形成定向检索边界。
             return retrieverService.retrieve(
                     RetrieveRequest.builder()
                             .collectionName(node.getCollectionName())
                             .query(question)
                             .topK(task.intentTopK())
+                            .accessScope(accessScope)
                             .build()
             );
         } catch (Exception e) {
@@ -112,7 +119,8 @@ public class IntentParallelRetriever extends AbstractParallelRetriever<IntentPar
     }
 
     /**
-     * 计算单个意图节点检索 TopK
+     * 计算单个意图的候选召回数。
+     * 节点级配置用于让信息密集或容易混淆的知识库获得更多候选；非法倍率回退，避免返回零条结果。
      */
     private int resolveIntentTopK(NodeScore nodeScore, int fallbackTopK, int topKMultiplier) {
         int baseTopK = fallbackTopK;

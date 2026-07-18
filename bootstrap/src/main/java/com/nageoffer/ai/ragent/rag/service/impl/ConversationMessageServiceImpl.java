@@ -40,6 +40,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 会话消息与摘要的持久化服务。
+ *
+ * <p>消息列表返回给前端时会附带当前用户对助手消息的反馈；
+ * 这样反馈表保持独立，消息主表不因每次点赞或点踩而被频繁更新。</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class ConversationMessageServiceImpl implements ConversationMessageService {
@@ -51,6 +57,7 @@ public class ConversationMessageServiceImpl implements ConversationMessageServic
 
     @Override
     public String addMessage(ConversationMessageBO conversationMessage) {
+        // BO 到 DO 的字段复制将应用层对象与数据库实体隔离，插入后使用数据库生成的消息 ID。
         ConversationMessageDO messageDO = BeanUtil.toBean(conversationMessage, ConversationMessageDO.class);
         conversationMessageMapper.insert(messageDO);
         return messageDO.getId();
@@ -62,6 +69,7 @@ public class ConversationMessageServiceImpl implements ConversationMessageServic
             return List.of();
         }
 
+        // 先校验会话归属；查询消息时重复带 userId 条件作为第二道数据隔离。
         ConversationDO conversation = conversationMapper.selectOne(
                 Wrappers.lambdaQuery(ConversationDO.class)
                         .eq(ConversationDO::getConversationId, conversationId)
@@ -72,6 +80,7 @@ public class ConversationMessageServiceImpl implements ConversationMessageServic
             return List.of();
         }
 
+        // SQL 倒序配合 limit 能高效取最近 N 条，但展示给用户仍应是时间正序。
         boolean asc = order == null || order == ConversationMessageOrder.ASC;
         List<ConversationMessageDO> records = conversationMessageMapper.selectList(
                 Wrappers.lambdaQuery(ConversationMessageDO.class)
@@ -86,9 +95,11 @@ public class ConversationMessageServiceImpl implements ConversationMessageServic
         }
 
         if (!asc) {
+            // 将“最新 N 条”的倒序查询结果恢复为自然对话顺序。
             Collections.reverse(records);
         }
 
+        // 只有助手消息才允许用户反馈；一次批量查询避免在循环中产生 N+1 次访问。
         List<String> assistantMessageIds = records.stream()
                 .filter(record -> "assistant".equalsIgnoreCase(record.getRole()))
                 .map(ConversationMessageDO::getId)
@@ -97,6 +108,7 @@ public class ConversationMessageServiceImpl implements ConversationMessageServic
 
         List<ConversationMessageVO> result = new ArrayList<>();
         for (ConversationMessageDO record : records) {
+            // 反馈缺失时 Map 返回 null，表示用户尚未评分而非系统错误。
             ConversationMessageVO vo = ConversationMessageVO.builder()
                     .id(String.valueOf(record.getId()))
                     .conversationId(record.getConversationId())
@@ -115,6 +127,7 @@ public class ConversationMessageServiceImpl implements ConversationMessageServic
 
     @Override
     public void addMessageSummary(ConversationSummaryBO conversationSummary) {
+        // 摘要是记忆压缩产物，独立存储以保留原始消息审计能力。
         ConversationSummaryDO conversationSummaryDO = BeanUtil.toBean(conversationSummary, ConversationSummaryDO.class);
         conversationSummaryMapper.insert(conversationSummaryDO);
     }

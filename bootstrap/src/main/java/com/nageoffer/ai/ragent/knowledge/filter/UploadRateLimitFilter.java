@@ -45,6 +45,14 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class UploadRateLimitFilter extends OncePerRequestFilter {
 
+    /*
+     * Upload limiting must happen before multipart parsing.
+     *
+     * Large multipart files may expand in memory during parsing. If the request reaches
+     * business code first, the server has already paid the memory cost. This high-priority
+     * filter acquires a distributed permit before Spring starts consuming the file body.
+     */
+
     private final RedissonClient redissonClient;
     private final RagSemaphoreProperties semaphoreProperties;
 
@@ -59,6 +67,8 @@ public class UploadRateLimitFilter extends OncePerRequestFilter {
         }
 
         // 获取信号量配置
+        // PermitExpirableSemaphore protects all application instances with one Redis-backed counter.
+        // leaseSeconds prevents a crashed request from holding the permit forever.
         RagSemaphoreProperties.PermitExpirableConfig config = semaphoreProperties.getDocumentUpload();
         RPermitExpirableSemaphore semaphore = redissonClient.getPermitExpirableSemaphore(config.getName());
 
@@ -72,6 +82,7 @@ public class UploadRateLimitFilter extends OncePerRequestFilter {
             );
 
             if (permitId == null) {
+                // Fail fast with 429 instead of letting too many large uploads enter multipart parsing together.
                 // 获取许可失败，直接返回 429
                 response.setStatus(429);
                 response.setContentType("application/json;charset=UTF-8");
@@ -88,6 +99,7 @@ public class UploadRateLimitFilter extends OncePerRequestFilter {
             response.getWriter().write("{\"code\":\"500\",\"message\":\"获取上传许可失败\"}");
         } finally {
             if (permitId != null) {
+                // Expirable permits may already be released by TTL; tryRelease returning false is not fatal.
                 boolean released = semaphore.tryRelease(permitId);
                 if (!released) {
                     log.warn("upload permit already expired or released, permitId={}", permitId);

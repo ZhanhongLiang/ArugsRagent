@@ -28,8 +28,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 意图树缓存管理器
- * 负责意图树在Redis中的缓存管理
+ * 意图树的 Redis 缓存管理器。
+ *
+ * <p>分类每次都查询数据库会增加延迟，因此缓存完整树；管理端修改节点后主动删除缓存，
+ * 下次分类再按“缓存未命中 -> 数据库加载 -> 回填缓存”的路径获得新版本。</p>
  */
 @Slf4j
 @Component
@@ -39,14 +41,10 @@ public class IntentTreeCacheManager {
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Redis缓存Key
-     */
+    /** 共享意图树的固定缓存键；保留技术前缀以兼容已有运行环境。 */
     private static final String INTENT_TREE_CACHE_KEY = "ragent:intent:tree";
 
-    /**
-     * 缓存过期时间：7天
-     */
+    /** 缓存兜底过期时间，防止节点更新漏删缓存时永久读取旧树。 */
     private static final long CACHE_EXPIRE_DAYS = 7;
 
     /**
@@ -58,10 +56,12 @@ public class IntentTreeCacheManager {
         try {
             String cacheJson = stringRedisTemplate.opsForValue().get(INTENT_TREE_CACHE_KEY);
             if (cacheJson == null) {
+                // 返回 null 而非空集合：调用方据此区分“缓存未命中”和“确实没有节点”。
                 log.info("意图树缓存不存在，需要从数据库加载");
                 return null;
             }
 
+            // 反序列化后保留父子嵌套结构，分类器可直接展开叶子节点。
             return objectMapper.readValue(
                     cacheJson,
                     new TypeReference<>() {
@@ -80,6 +80,7 @@ public class IntentTreeCacheManager {
      */
     public void saveIntentTreeToCache(List<IntentNode> roots) {
         try {
+            // 一次写入完整树，读取无需多次 Redis 往返再拼装父子关系。
             String cacheJson = objectMapper.writeValueAsString(roots);
             stringRedisTemplate.opsForValue().set(
                     INTENT_TREE_CACHE_KEY,
@@ -98,6 +99,7 @@ public class IntentTreeCacheManager {
      * 在意图节点发生增删改时调用
      */
     public void clearIntentTreeCache() {
+        // 删除而不是同步重建，避免管理写请求承担数据库加载和序列化延迟。
         Boolean deleted = stringRedisTemplate.delete(INTENT_TREE_CACHE_KEY);
         if (deleted) {
             log.info("意图树缓存已清除，Key: {}", INTENT_TREE_CACHE_KEY);
@@ -113,6 +115,7 @@ public class IntentTreeCacheManager {
      */
     public boolean isCacheExists() {
         try {
+            // 仅供管理或诊断使用，不应依据此结果跳过实际读取。
             return stringRedisTemplate.hasKey(INTENT_TREE_CACHE_KEY);
         } catch (Exception e) {
             log.error("检查意图树缓存是否存在失败", e);

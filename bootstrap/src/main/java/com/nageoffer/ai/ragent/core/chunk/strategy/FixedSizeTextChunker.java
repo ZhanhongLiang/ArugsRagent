@@ -42,6 +42,14 @@ import java.util.List;
 @Component
 public class FixedSizeTextChunker implements ChunkingStrategy {
 
+    /*
+     * Fixed-size chunking is the predictable baseline strategy.
+     *
+     * It is useful for plain text or weakly structured documents. The trade-off is clear:
+     * stable chunk length and overlap, but weaker semantic boundary preservation than the
+     * structure-aware strategy.
+     */
+
     @Override
     public ChunkingMode getType() {
         return ChunkingMode.FIXED_SIZE;
@@ -49,6 +57,7 @@ public class FixedSizeTextChunker implements ChunkingStrategy {
 
     @Override
     public List<VectorChunk> chunk(String text, ChunkingOptions config) {
+        // Normalize before slicing so broken URLs or CJK soft line breaks do not create poor retrieval fragments.
         if (!StringUtils.hasText(text)) {
             return List.of();
         }
@@ -83,6 +92,7 @@ public class FixedSizeTextChunker implements ChunkingStrategy {
         int lastEnd = -1;
 
         while (start < len) {
+            // Move the end position backward to a nearby boundary when possible, but never so far that progress stops.
             int targetEnd = Math.min(start + chunkSize, len);
             int end = adjustToBoundary(normalized, start, targetEnd, overlap);
 

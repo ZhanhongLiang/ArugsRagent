@@ -18,6 +18,7 @@ import { SystemSettingsPage } from "@/pages/admin/settings/SystemSettingsPage";
 import { SampleQuestionPage } from "@/pages/admin/sample-questions/SampleQuestionPage";
 import { QueryTermMappingPage } from "@/pages/admin/query-term-mapping/QueryTermMappingPage";
 import { UserListPage } from "@/pages/admin/users/UserListPage";
+import { DataAccessPage } from "@/pages/admin/data-access/DataAccessPage";
 import { useAuthStore } from "@/stores/authStore";
 
 function RequireAuth({ children }: { children: JSX.Element }) {
@@ -152,6 +153,10 @@ export const router = createBrowserRouter([
       {
         path: "users",
         element: <UserListPage />
+      },
+      {
+        path: "data-access",
+        element: <DataAccessPage />
       }
     ]
   },

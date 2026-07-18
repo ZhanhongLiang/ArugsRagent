@@ -38,7 +38,10 @@ import java.lang.reflect.Method;
 import java.util.Date;
 
 /**
- * 注解式 RAG Trace 采集切面
+ * 拦截 {@link RagTraceNode} 的同步方法，并将其记录为当前 Trace 的树节点。
+ *
+ * <p>节点 ID 入栈后，嵌套方法可读取它作为 parentNodeId；无论方法成功或抛异常，
+ * 最终都会更新节点状态与耗时，避免管理端长期看到 RUNNING 节点。</p>
  */
 @Slf4j
 @Aspect
@@ -57,10 +60,12 @@ public class RagTraceAspect {
     @Around("@annotation(traceNode)")
     public Object aroundNode(ProceedingJoinPoint joinPoint, RagTraceNode traceNode) throws Throwable {
         if (!traceProperties.isEnabled()) {
+            // 关闭采集时完全透传，Trace 不应影响业务可用性。
             return joinPoint.proceed();
         }
         String traceId = RagTraceContext.getTraceId();
         if (StrUtil.isBlank(traceId)) {
+            // 当前请求不在一条 Trace 中，不能创建无归属节点。
             return joinPoint.proceed();
         }
 
@@ -72,6 +77,7 @@ public class RagTraceAspect {
         Date startTime = new Date();
         long startMillis = System.currentTimeMillis();
 
+        // 先落 RUNNING 节点，再执行真实业务；这样异常发生时仍有可更新的记录。
         traceRecordService.startNode(RagTraceNodeDO.builder()
                 .traceId(traceId)
                 .nodeId(nodeId)
@@ -85,6 +91,7 @@ public class RagTraceAspect {
                 .startTime(startTime)
                 .build());
 
+        // 入栈建立父子层级，finally 中必须配对弹栈。
         RagTraceContext.pushNode(nodeId);
         try {
             Object result = joinPoint.proceed();
@@ -108,6 +115,7 @@ public class RagTraceAspect {
             );
             throw ex;
         } finally {
+            // 即使业务异常也恢复调用线程上下文，防止后续节点错误挂到本节点下。
             RagTraceContext.popNode();
         }
     }
@@ -116,6 +124,7 @@ public class RagTraceAspect {
         if (throwable == null) {
             return null;
         }
+        // 仅保存异常类型和消息，受配置长度限制，避免大堆栈或模型输出膨胀 Trace 表。
         String message = throwable.getClass().getSimpleName() + ": " + StrUtil.blankToDefault(throwable.getMessage(), "");
         if (message.length() <= traceProperties.getMaxErrorLength()) {
             return message;

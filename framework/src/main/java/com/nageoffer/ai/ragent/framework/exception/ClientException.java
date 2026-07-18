@@ -21,27 +21,32 @@ import com.nageoffer.ai.ragent.framework.errorcode.BaseErrorCode;
 import com.nageoffer.ai.ragent.framework.errorcode.IErrorCode;
 
 /**
- * 客户端异常
- * 用户发起调用请求后因客户端提交参数或其他客户端问题导致的异常
+ * 调用方输入、状态或权限不满足业务要求时抛出的异常。
+ * 此类异常通常应返回给用户可修正的提示，而不是暴露服务器堆栈。
  */
 public class ClientException extends AbstractException {
 
+    /** 使用错误码默认提示创建客户端异常。 */
     public ClientException(IErrorCode errorCode) {
         this(null, null, errorCode);
     }
 
+    /** 使用默认客户端错误码和自定义业务提示创建异常。 */
     public ClientException(String message) {
         this(message, null, BaseErrorCode.CLIENT_ERROR);
     }
 
+    /** 使用指定错误码和自定义提示创建异常。 */
     public ClientException(String message, IErrorCode errorCode) {
         this(message, null, errorCode);
     }
 
+    /** 保留根因，供日志查看，同时向上层暴露统一错误码。 */
     public ClientException(String message, Throwable throwable, IErrorCode errorCode) {
         super(message, throwable, errorCode);
     }
 
+    /** 避免 RuntimeException 默认格式，便于日志快速阅读错误码和错误消息。 */
     @Override
     public String toString() {
         return "ClientException{" +

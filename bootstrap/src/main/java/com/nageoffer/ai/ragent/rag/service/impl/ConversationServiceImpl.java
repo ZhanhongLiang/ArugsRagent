@@ -41,8 +41,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 会话服务实现类
- * 处理会话的创建、更新、重命名和删除等业务逻辑
+ * 会话主记录的管理服务。
+ *
+ * <p>会话表只保存标题和最后活跃时间；具体消息与长期摘要分别落在独立表中，
+ * 以便列表页快速查询，同时支持记忆压缩和级联清理。</p>
  */
 @Slf4j
 @Service
@@ -58,9 +60,11 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     public List<ConversationVO> listByUserId(String userId) {
         if (StrUtil.isBlank(userId)) {
+            // 没有用户上下文时不能泄露任何会话，直接返回空集合。
             return List.of();
         }
 
+        // 按最近活跃时间倒序，前端首次进入即可看到最近使用的会话。
         List<ConversationDO> records = conversationMapper.selectList(
                 Wrappers.lambdaQuery(ConversationDO.class)
                         .eq(ConversationDO::getUserId, userId)
@@ -89,6 +93,7 @@ public class ConversationServiceImpl implements ConversationService {
             throw new ClientException("用户信息缺失");
         }
 
+        // conversationId 与 userId 共同限定归属，避免同一 ID 被其他用户更新。
         ConversationDO existing = conversationMapper.selectOne(
                 Wrappers.lambdaQuery(ConversationDO.class)
                         .eq(ConversationDO::getConversationId, conversationId)
@@ -97,6 +102,7 @@ public class ConversationServiceImpl implements ConversationService {
         );
 
         if (existing == null) {
+            // 仅首次提问生成标题；后续消息只刷新活跃时间，避免标题频繁跳变并额外调用模型。
             String title = titleGenerator.generate(question);
             ConversationDO record = ConversationDO.builder()
                     .conversationId(conversationId)
@@ -108,12 +114,14 @@ public class ConversationServiceImpl implements ConversationService {
             return;
         }
 
+        // 已存在会话不重新生成标题，只更新排序用的最后活跃时间。
         existing.setLastTime(request.getLastTime());
         conversationMapper.updateById(existing);
     }
 
     @Override
     public void rename(String conversationId, ConversationUpdateRequest request) {
+        // 用户 ID 从 ThreadLocal 上下文获取，不能信任客户端在请求体中伪造归属。
         String userId = UserContext.getUserId();
         if (StrUtil.isBlank(conversationId) || StrUtil.isBlank(userId)) {
             throw new ClientException("会话信息缺失");
@@ -123,11 +131,13 @@ public class ConversationServiceImpl implements ConversationService {
         if (StrUtil.isBlank(title)) {
             throw new ClientException("会话名称不能为空");
         }
+        // 标题长度与生成 Prompt 使用同一配置，保证人工重命名和自动标题约束一致。
         int maxLen = memoryProperties.getTitleMaxLength();
         if (title.length() > maxLen) {
             throw new ClientException("会话名称长度不能超过" + maxLen + "个字符");
         }
 
+        // 读取时校验归属后才允许更新，形成用户维度的访问控制。
         ConversationDO record = conversationMapper.selectOne(
                 Wrappers.lambdaQuery(ConversationDO.class)
                         .eq(ConversationDO::getConversationId, conversationId)
@@ -145,6 +155,7 @@ public class ConversationServiceImpl implements ConversationService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void delete(String conversationId) {
+        // 删除会话、消息和摘要必须同一事务提交，避免只删主记录留下历史或摘要孤儿数据。
         String userId = UserContext.getUserId();
         if (StrUtil.isBlank(conversationId) || StrUtil.isBlank(userId)) {
             throw new ClientException("会话信息缺失");
@@ -160,6 +171,7 @@ public class ConversationServiceImpl implements ConversationService {
             throw new ClientException("会话不存在");
         }
 
+        // 先删除主会话，再按会话和用户双条件清理附属数据。
         conversationMapper.deleteById(record.getId());
         messageMapper.delete(
                 Wrappers.lambdaQuery(ConversationMessageDO.class)

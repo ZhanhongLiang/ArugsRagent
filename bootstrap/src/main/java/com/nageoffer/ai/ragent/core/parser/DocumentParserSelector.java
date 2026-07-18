@@ -41,11 +41,20 @@ import java.util.stream.Collectors;
 @Component
 public class DocumentParserSelector {
 
+    /*
+     * Strategy selector for document parsing.
+     *
+     * Spring injects all DocumentParser implementations. The selector then chooses by explicit
+     * parser type or MIME type. This keeps the ingestion pipeline open for new formats without
+     * modifying the document service.
+     */
+
     private final List<DocumentParser> strategies;
     private final Map<String, DocumentParser> strategyMap;
 
     public DocumentParserSelector(List<DocumentParser> parsers) {
         this.strategies = parsers;
+        // Build parserType -> parser index once at startup for direct strategy lookup.
         this.strategyMap = parsers.stream()
                 .collect(Collectors.toMap(
                         DocumentParser::getParserType,
@@ -75,6 +84,7 @@ public class DocumentParserSelector {
      * @return 支持该 MIME 类型的解析器，如果没有则返回默认的 Tika 解析器
      */
     public DocumentParser selectByMimeType(String mimeType) {
+        // Prefer a parser that declares support for this MIME type; Tika is the generic fallback.
         return strategies.stream()
                 .filter(parser -> parser.supports(mimeType))
                 .findFirst()

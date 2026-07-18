@@ -41,8 +41,18 @@ import java.util.function.Consumer;
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class StreamAsyncExecutor {
 
+    /** 线程池拒绝任务时返回给上游的统一错误信息。 */
     private static final String STREAM_BUSY_MESSAGE = "流式线程池繁忙";
 
+    /**
+     * 将阻塞式 SSE 读取提交到模型专用线程池，并返回可取消句柄。
+     *
+     * @param executor 承担模型流读取的专用线程池
+     * @param call 当前供应商请求对应的 OkHttp 调用
+     * @param callback 接收流式内容、完成或异常事件的回调
+     * @param streamTask 真正执行逐行读取的任务，入参是协作取消标志
+     * @return 可同时取消协作标志与底层 HTTP 调用的句柄
+     */
     static StreamCancellationHandle submit(Executor executor,
                                            Call call,
                                            StreamCallback callback,

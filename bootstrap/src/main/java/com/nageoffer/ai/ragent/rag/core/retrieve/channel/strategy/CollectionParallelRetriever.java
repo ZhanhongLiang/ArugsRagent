@@ -18,6 +18,7 @@
 package com.nageoffer.ai.ragent.rag.core.retrieve.channel.strategy;
 
 import com.nageoffer.ai.ragent.framework.convention.RetrievedChunk;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.rag.core.retrieve.RetrieveRequest;
 import com.nageoffer.ai.ragent.rag.core.retrieve.RetrieverService;
 import com.nageoffer.ai.ragent.rag.core.retrieve.channel.AbstractParallelRetriever;
@@ -27,27 +28,35 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
- * Collection 并行检索器
- * 继承模板类，实现 Collection 特定的检索逻辑
+ * 按向量集合并发检索的全局召回策略。
+ *
+ * <p>它不依赖意图节点，而是对已筛出的所有知识库集合分别检索；
+ * 因此适合意图缺失、置信度不足或需要扩大召回范围的兜底场景。</p>
  */
 @Slf4j
 public class CollectionParallelRetriever extends AbstractParallelRetriever<String> {
 
     private final RetrieverService retrieverService;
+    private final KnowledgeAccessScope accessScope;
 
-    public CollectionParallelRetriever(RetrieverService retrieverService, Executor executor) {
+    public CollectionParallelRetriever(RetrieverService retrieverService,
+                                       Executor executor,
+                                       KnowledgeAccessScope accessScope) {
         super(executor);
         this.retrieverService = retrieverService;
+        this.accessScope = accessScope;
     }
 
     @Override
     protected List<RetrievedChunk> createRetrievalTask(String question, String collectionName, int topK) {
         try {
+            // 每个集合独立失败可降级为空结果，父类仍会合并其他可用集合的结果。
             return retrieverService.retrieve(
                     RetrieveRequest.builder()
                             .collectionName(collectionName)
                             .query(question)
                             .topK(topK)
+                            .accessScope(accessScope)
                             .build()
             );
         } catch (Exception e) {
@@ -58,6 +67,7 @@ public class CollectionParallelRetriever extends AbstractParallelRetriever<Strin
 
     @Override
     protected String getTargetIdentifier(String collectionName) {
+        // 仅用于失败日志定位，不参与向量库查询。
         return "Collection: " + collectionName;
     }
 

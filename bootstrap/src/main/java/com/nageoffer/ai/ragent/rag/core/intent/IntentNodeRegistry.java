@@ -18,13 +18,15 @@
 package com.nageoffer.ai.ragent.rag.core.intent;
 
 /**
- * 意图节点注册表
- * 用于在运行期快速获取意图树和节点信息
+ * 意图节点的运行期查询入口。
+ *
+ * <p>MCP 路由、Prompt 规划等组件只需按节点 ID 读取配置，
+ * 不需要了解节点来自缓存还是数据库。</p>
  */
 public interface IntentNodeRegistry {
 
     /**
-     * 根据节点 ID 获取节点
+     * 根据节点 ID 获取节点；未知或空 ID 返回 {@code null}，由调用方决定如何降级。
      */
     IntentNode getNodeById(String id);
 }

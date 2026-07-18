@@ -22,10 +22,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * RAG 系统功能配置
+ * RAG 可独立启停功能的轻量开关配置。
  *
  * <p>
- * 用于管理 RAG 系统的各项功能开关，例如查询重写等
+ * 关闭某项能力只跳过对应阶段，不改变请求和响应协议，便于降级或 A/B 对比。
  * </p>
  *
  * <pre>
@@ -41,19 +41,13 @@ import org.springframework.context.annotation.Configuration;
 public class RAGConfigProperties {
 
     /**
-     * 查询重写功能开关
-     * <p>
-     * 控制是否启用查询重写功能，查询重写可以将用户的查询语句优化为更适合检索的形式
-     * 默认值：{@code true}
+     * 是否启用问题重写与子问题拆分；关闭后检索直接使用原问题或规则兜底结果。
      */
     @Value("${rag.query-rewrite.enabled:true}")
     private Boolean queryRewriteEnabled;
 
     /**
-     * Rerank 重排序功能开关
-     * <p>
-     * 控制是否启用 Rerank 后置处理器对召回结果进行重排序
-     * 默认值：{@code true}
+     * 是否启用重排序后置处理；关闭时仍可召回，只是候选按原通道顺序继续截断。
      */
     @Value("${rag.rerank.enabled:true}")
     private Boolean rerankEnabled;

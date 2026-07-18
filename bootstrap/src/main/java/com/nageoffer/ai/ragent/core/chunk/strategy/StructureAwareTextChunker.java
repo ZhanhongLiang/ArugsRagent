@@ -43,6 +43,14 @@ import java.util.regex.Pattern;
 @Component
 public class StructureAwareTextChunker implements ChunkingStrategy {
 
+    /*
+     * Structure-aware chunking preserves document semantics better than raw fixed-size slicing.
+     *
+     * The algorithm first scans Markdown-like text into blocks, then packs complete blocks into
+     * chunks. It tries hard not to split headings, code fences, images or normal paragraphs in
+     * the middle, because broken semantic units usually hurt retrieval precision.
+     */
+
     private static final Pattern HEADING = Pattern.compile("^#{1,6}\\s+.*$");
     private static final Pattern CODE_FENCE = Pattern.compile("^```.*$");
     private static final Pattern ATOMIC_IMAGE = Pattern.compile("^!\\[[^]]*]\\([^)]+\\)(?:\\s*\"[^\"]*\")?\\s*$");
@@ -55,6 +63,7 @@ public class StructureAwareTextChunker implements ChunkingStrategy {
 
     @Override
     public List<VectorChunk> chunk(String text, ChunkingOptions config) {
+        // Keep original content as much as possible; only line endings are normalized for stable block detection.
         if (StrUtil.isBlank(text)) return List.of();
 
         // 统一行尾：Windows \r\n → \n，老 Mac \r → \n，避免 \r 残留导致空行/标题识别失败
@@ -67,6 +76,7 @@ public class StructureAwareTextChunker implements ChunkingStrategy {
         int effectiveOverlap = opts.overlapChars();
 
         // 1) 扫描成“块”（记录原文的 start/end 下标，确保输出 substring 完全等于原文）
+        // Step 1: produce structural blocks with original start/end offsets.
         List<Block> blocks = segmentToBlocks(text);
 
         if (blocks.isEmpty()) {
@@ -79,9 +89,11 @@ public class StructureAwareTextChunker implements ChunkingStrategy {
         }
 
         // 2) 依据 min/target/max 打包成 chunk（只在块边界切分）
+        // Step 2: pack blocks into chunk ranges according to min/target/max character budgets.
         List<int[]> ranges = packBlocksToChunks(blocks, text.length(), effectiveMin, effectiveTarget, effectiveMax);
 
         // 3)（可选）加入重叠：为保持“只在块边界切分”，这里不在中间加重叠，若开启 overlap，仅复制“上一 chunk 的尾部全文子串”到下一 chunk 的开头
+        // Step 3: materialize ranges back to text; optional overlap copies previous tail by block-safe text.
         List<VectorChunk> out = materialize(text, ranges, effectiveOverlap);
 
         // 编号从 0 递增

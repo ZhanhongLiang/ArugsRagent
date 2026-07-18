@@ -20,6 +20,8 @@ package com.nageoffer.ai.ragent.rag.core.retrieve;
 import cn.hutool.core.collection.CollUtil;
 import com.nageoffer.ai.ragent.framework.convention.RetrievedChunk;
 import com.nageoffer.ai.ragent.framework.trace.RagTraceNode;
+import com.nageoffer.ai.ragent.knowledge.access.service.KnowledgeAccessService;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.rag.core.retrieve.channel.SearchChannel;
 import com.nageoffer.ai.ragent.rag.core.retrieve.channel.SearchChannelResult;
 import com.nageoffer.ai.ragent.rag.core.retrieve.channel.SearchContext;
@@ -48,8 +50,9 @@ import java.util.stream.Collectors;
 public class MultiChannelRetrievalEngine {
 
     private final List<SearchChannel> searchChannels; // spring boot会自动注入bean, 包括检索通道
-    private final List<SearchResultPostProcessor> postProcessors; // spring boot自动注入bean
-    private final Executor ragRetrievalExecutor;
+    private final List<SearchResultPostProcessor> postProcessors; // spring boot自动注入bean，
+    private final Executor ragRetrievalExecutor; // 在config中的ThreadPoolExecutorConfig已经定义好了线程的参数
+    private final KnowledgeAccessService knowledgeAccessService;
 
     /**
      * 执行多通道检索（仅 KB 场景）
@@ -61,9 +64,18 @@ public class MultiChannelRetrievalEngine {
      */
     @RagTraceNode(name = "multi-channel-retrieval", type = "RETRIEVE_CHANNEL")
     public List<RetrievedChunk> retrieveKnowledgeChannels(List<SubQuestionIntent> subIntents, int topK) {
+        return retrieveKnowledgeChannels(subIntents, topK, knowledgeAccessService.currentAccessScope());
+    }
+
+    /**
+     * 复用请求入口已确定的权限快照，保证异步通道不受中途 ACL 更新影响。
+     */
+    public List<RetrievedChunk> retrieveKnowledgeChannels(List<SubQuestionIntent> subIntents,
+                                                           int topK,
+                                                           KnowledgeAccessScope accessScope) {
         // 构建检索上下文
         //构建检索上下文 SearchContext context = buildSearchContext(subIntents, topK); //【阶段1：多通道并行检索】
-        SearchContext context = buildSearchContext(subIntents, topK);
+        SearchContext context = buildSearchContext(subIntents, topK, accessScope); // 构建SearchContex检索上下文
 
         // 【阶段1：多通道并行检索】
         List<SearchChannelResult> channelResults = executeSearchChannels(context);
@@ -100,8 +112,16 @@ public class MultiChannelRetrievalEngine {
      * 再按通道优先级排序，最后把启用的通道提交到 ragRetrievalExecutor 并行执行。</p>
      */
     private List<SearchChannelResult> executeSearchChannels(SearchContext context) {
+        // searchChannels由IntentDirectedSearchChannel和VectorGlobalSearchChannel实现了
+        // 也就是靠spring的bean机制自动组装,
+        // searchChannels = [
+        //  IntentDirectedSearchChannel,
+        //  VectorGlobalSearchChannel
+        //]
         // 逐个询问每个 SearchChannel 是否适合处理本次检索。
         // 判断逻辑不在引擎里写死，而是下沉到各通道自己的 isEnabled(context) 方法中。
+        // IntentDirectedSearchChannel.isEnabled会确保只有KB的意图存在
+        // VectorGlobalSearchChannel.isEnabled会确保问题的意图分数是否达标能只启动KB定向检测的水平
         List<SearchChannel> enabledChannels = searchChannels.stream()
                 .filter(channel -> channel.isEnabled(context))
                 // 数字越小优先级越高；排序主要影响日志、结果合并和后置处理时的通道顺序。
@@ -117,6 +137,7 @@ public class MultiChannelRetrievalEngine {
 
         // enabledChannels 已经是“本轮被激活的通道集合”。
         // 这里不会再判断通道类型，而是统一调用 channel.search(context)，让每个通道执行自己的检索策略。
+        // 也就是每个子问题会执行外部线程的同时，也会在不同线程跑不同的检索，这样就实现了高并发
         List<CompletableFuture<SearchChannelResult>> futures = enabledChannels.stream()
                 .map(channel -> CompletableFuture.supplyAsync(
                         () -> {
@@ -195,6 +216,7 @@ public class MultiChannelRetrievalEngine {
          * 去重处理器的 `getOrder()` 返回 1，是流水线中最先执行的。原因很直接：
          * 如果不先去重就精排，同一条 Chunk 在意图定向和全局向量两个通道各出现一次，
          * Rerank 模型要给它打两次分——浪费 API 调用和算力，而且重复 Chunk 还会占据 topK 的名额。
+         * postProcessors[RerankPostProcessor, DeduplicationPostProcessor], 那个优先级高就执行那个先
          */
         List<SearchResultPostProcessor> enabledProcessors = postProcessors.stream()
                 .filter(processor -> processor.isEnabled(context))
@@ -203,19 +225,23 @@ public class MultiChannelRetrievalEngine {
 
         if (enabledProcessors.isEmpty()) {
             log.warn("没有启用的后置处理器，直接返回原始结果");
+            // 假设原先有个检索通道得到,分别为意图检索通道，全局检索通道，
+            // 最后得到的List<SearchChannelResult>是[意图通道结果, 全局通道结果] -> [所有的chunk集合]
             return results.stream()
                     .flatMap(r -> r.getChunks().stream())
                     .collect(Collectors.toList());
         }
 
         // 初始 Chunk 列表（所有通道的结果合并）
+        // 假设原先有个检索通道得到,分别为意图检索通道，全局检索通道，
+        // 最后得到的List<SearchChannelResult>是[意图通道结果, 全局通道结果] -> [所有的chunk集合]
         List<RetrievedChunk> chunks = results.stream()
                 .flatMap(r -> r.getChunks().stream())
                 .collect(Collectors.toList());
 
         int initialSize = chunks.size();
 
-        // 依次执行处理器
+        // 依次执行处理器, 都是去重处理器先执行，后面才到重排处理器
         for (SearchResultPostProcessor processor : enabledProcessors) {
             try {
                 int beforeSize = chunks.size();
@@ -252,7 +278,9 @@ public class MultiChannelRetrievalEngine {
     /**
      * 构建检索上下文
      */
-    private SearchContext buildSearchContext(List<SubQuestionIntent> subIntents, int topK) {
+    private SearchContext buildSearchContext(List<SubQuestionIntent> subIntents,
+                                             int topK,
+                                             KnowledgeAccessScope accessScope) {
         String question = CollUtil.isEmpty(subIntents) ? "" : subIntents.get(0).subQuestion();
 
         return SearchContext.builder()
@@ -260,6 +288,7 @@ public class MultiChannelRetrievalEngine {
                 .rewrittenQuestion(question)
                 .intents(subIntents)
                 .topK(topK)
+                .accessScope(accessScope)
                 .build();
     }
 }

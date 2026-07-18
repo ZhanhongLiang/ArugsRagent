@@ -56,8 +56,7 @@ public class WebConfig implements WebMvcConfigurer {
         // 使用 UTF-8 作为字符串响应的默认编码
         StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
 
-        // 避免在响应的 Content-Type 头中自动添加 "charset" 列表（accept-charset），
-        // 防止某些客户端或中间件对该头部解析不兼容
+        // 不枚举所有可接受字符集，减少响应头体积并避免少数中间件的兼容性问题。
         stringConverter.setWriteAcceptCharset(false);
 
         // 将自定义的 String 消息转换器放在列表首位，提高其匹配优先级
@@ -66,6 +65,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // 当前允许任意来源模式以支持本地前端调试；生产部署应在网关或配置层收紧来源范围。
         registry.addMapping("/**")
                 .allowedOriginPatterns("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")

@@ -26,17 +26,24 @@ import java.time.ZoneId;
 import java.util.Date;
 
 /**
- * Cron 工具类
+ * 知识库定时同步使用的 Cron 计算工具。
+ * 统一使用系统时区把 Spring CronExpression 的 LocalDateTime 结果转换回 Date，避免不同调用点各自处理时区。
  */
 public final class CronScheduleHelper {
 
+    /** 工具类不允许实例化。 */
     private CronScheduleHelper() {
     }
 
+    /**
+     * 计算给定起点之后的下一次执行时间。
+     * 空 Cron、空起点或无下一次触发时间均返回 null，由上层决定禁用或报错。
+     */
     public static Date nextRunTime(String cron, Date from) {
         if (!StringUtils.hasText(cron) || from == null) {
             return null;
         }
+        // CronExpression.parse 会在表达式不合法时抛 IllegalArgumentException，交给调用方转换为业务提示。
         CronExpression expression = CronExpression.parse(cron.trim());
         LocalDateTime fromTime = LocalDateTime.ofInstant(from.toInstant(), ZoneId.systemDefault());
         LocalDateTime next = expression.next(fromTime);
@@ -46,6 +53,10 @@ public final class CronScheduleHelper {
         return Date.from(next.atZone(ZoneId.systemDefault()).toInstant());
     }
 
+    /**
+     * 通过连续两次触发时间计算实际周期，判断是否小于系统允许的最短秒数。
+     * 这比仅检查 Cron 字符串可靠，能够识别复杂表达式的真实触发频率。
+     */
     public static boolean isIntervalLessThan(String cron, Date from, long minSeconds) {
         if (!StringUtils.hasText(cron) || from == null) {
             return true;
@@ -60,6 +71,7 @@ public final class CronScheduleHelper {
         if (second == null) {
             return true;
         }
+        // 取相邻两次触发的间隔，避免高频 Cron 压垮远程站点和本地分块线程池。
         long diffSeconds = Duration.between(first, second).getSeconds();
         return diffSeconds < minSeconds;
     }

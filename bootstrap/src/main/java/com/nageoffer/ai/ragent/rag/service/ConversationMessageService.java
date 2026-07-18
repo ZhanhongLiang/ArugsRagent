@@ -24,17 +24,20 @@ import com.nageoffer.ai.ragent.rag.service.bo.ConversationSummaryBO;
 
 import java.util.List;
 
+/**
+ * 会话消息及记忆摘要的读写契约。
+ */
 public interface ConversationMessageService {
 
     /**
-     * 新增对话消息
+     * 新增一条已完成持久化的对话消息，并返回其数据库主键。
      *
      * @param conversationMessage 消息内容
      */
     String addMessage(ConversationMessageBO conversationMessage);
 
     /**
-     * 获取对话消息列表（支持排序与数量限制）
+     * 获取当前用户有权访问的消息列表；倒序取最近数据时实现仍应返回自然时间顺序。
      *
      * @param conversationId 对话ID
      * @param userId         用户ID
@@ -45,7 +48,7 @@ public interface ConversationMessageService {
     List<ConversationMessageVO> listMessages(String conversationId, String userId, Integer limit, ConversationMessageOrder order);
 
     /**
-     * 添加对话摘要
+     * 添加对话摘要，供长会话记忆压缩后代替早期原文使用。
      *
      * @param conversationSummary 对话摘要内容
      */

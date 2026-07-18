@@ -18,11 +18,11 @@
 package com.nageoffer.ai.ragent.ingestion.strategy.fetcher;
 
 /**
- * 抓取结果实体类
+ * 抓取阶段与解析阶段之间的标准数据契约。
  *
- * @param content  抓取到的内容字节数组
- * @param mimeType 内容的 MIME 类型
- * @param fileName 文件名称
+ * @param content 抓取到的原始内容字节，后续 ParserNode 以此解析文本
+ * @param mimeType 经响应头或内容探测得到的 MIME 类型
+ * @param fileName 用于 MIME 推断、日志展示和文档命名的文件名
  */
 public record FetchResult(byte[] content, String mimeType, String fileName) {
 }

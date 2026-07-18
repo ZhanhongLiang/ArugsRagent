@@ -52,7 +52,8 @@ public abstract class AbstractParallelRetriever<T> {
     public final List<RetrievedChunk> executeParallelRetrieval(String question,
                                                                List<T> targets,
                                                                int topK) {
-        // 1. 创建 Future 列表
+        // 为每个独立目标创建异步任务；例如一个意图对应一个知识库集合。
+        // 任务之间没有数据依赖，因此并行可缩短多库检索的总等待时间。
         record RetrievalFuture<T>(T target, CompletableFuture<List<RetrievedChunk>> future) {
         }
 
@@ -66,7 +67,7 @@ public abstract class AbstractParallelRetriever<T> {
                 })
                 .toList();
 
-        // 2. 收集结果并统计成功/失败数
+        // 逐个等待已提交任务。某一个集合失败只记录该集合，不影响其他集合的召回结果。
         List<RetrievedChunk> allChunks = new ArrayList<>();
         int successCount = 0;
         int failureCount = 0;
@@ -82,7 +83,7 @@ public abstract class AbstractParallelRetriever<T> {
             }
         }
 
-        // 3. 打印统计日志
+        // 汇总日志用于观察多目标检索的覆盖度和局部故障，不参与结果排序。
         log.info("{} 检索统计 - 总目标数: {}, 成功: {}, 失败: {}, 检索到 Chunk 总数: {}",
                 getStatisticsName(), targets.size(), successCount, failureCount, allChunks.size());
 

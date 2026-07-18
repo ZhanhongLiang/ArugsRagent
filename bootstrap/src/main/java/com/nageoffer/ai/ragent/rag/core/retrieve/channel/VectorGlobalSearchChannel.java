@@ -20,6 +20,7 @@ package com.nageoffer.ai.ragent.rag.core.retrieve.channel;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.nageoffer.ai.ragent.framework.convention.RetrievedChunk;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.knowledge.dao.entity.KnowledgeBaseDO;
 import com.nageoffer.ai.ragent.knowledge.dao.mapper.KnowledgeBaseMapper;
 import com.nageoffer.ai.ragent.rag.config.SearchChannelProperties;
@@ -50,7 +51,8 @@ public class VectorGlobalSearchChannel implements SearchChannel {
 
     private final SearchChannelProperties properties;
     private final KnowledgeBaseMapper knowledgeBaseMapper;
-    private final CollectionParallelRetriever parallelRetriever;
+    private final RetrieverService retrieverService;
+    private final Executor innerRetrievalExecutor;
 
     public VectorGlobalSearchChannel(RetrieverService retrieverService,
                                      SearchChannelProperties properties,
@@ -58,7 +60,8 @@ public class VectorGlobalSearchChannel implements SearchChannel {
                                      Executor innerRetrievalExecutor) {
         this.properties = properties;
         this.knowledgeBaseMapper = knowledgeBaseMapper;
-        this.parallelRetriever = new CollectionParallelRetriever(retrieverService, innerRetrievalExecutor);
+        this.retrieverService = retrieverService;
+        this.innerRetrievalExecutor = innerRetrievalExecutor;
     }
 
     @Override
@@ -130,7 +133,7 @@ public class VectorGlobalSearchChannel implements SearchChannel {
             log.info("执行向量全局检索，问题：{}", context.getMainQuestion());
 
             // 获取所有 KB 类型的 collection
-            List<String> collections = getAllKBCollections();
+            List<String> collections = getAllKBCollections(context.getAccessScope());
 
             if (collections.isEmpty()) {
                 log.warn("未找到任何 KB collection，跳过全局检索");
@@ -147,7 +150,8 @@ public class VectorGlobalSearchChannel implements SearchChannel {
             List<RetrievedChunk> allChunks = retrieveFromAllCollections(
                     context.getMainQuestion(),
                     collections,
-                    context.getTopK() * topKMultiplier
+                    context.getTopK() * topKMultiplier,
+                    context.getAccessScope()
             );
 
             long latency = System.currentTimeMillis() - startTime;
@@ -175,7 +179,7 @@ public class VectorGlobalSearchChannel implements SearchChannel {
     /**
      * 获取所有 KB 类型的 collection
      */
-    private List<String> getAllKBCollections() {
+    private List<String> getAllKBCollections(KnowledgeAccessScope accessScope) {
         Set<String> collections = new HashSet<>();
 
         // 从知识库表获取全量 collection（全局检索兜底）
@@ -186,7 +190,8 @@ public class VectorGlobalSearchChannel implements SearchChannel {
         );
         for (KnowledgeBaseDO kb : kbList) {
             String collectionName = kb.getCollectionName();
-            if (collectionName != null && !collectionName.isBlank()) {
+            if (collectionName != null && !collectionName.isBlank()
+                    && (accessScope == null || accessScope.canReadCollection(collectionName))) {
                 collections.add(collectionName);
             }
         }
@@ -199,9 +204,11 @@ public class VectorGlobalSearchChannel implements SearchChannel {
      */
     private List<RetrievedChunk> retrieveFromAllCollections(String question,
                                                             List<String> collections,
-                                                            int topK) {
+                                                            int topK,
+                                                            KnowledgeAccessScope accessScope) {
         // 使用模板方法执行并行检索
-        return parallelRetriever.executeParallelRetrieval(question, collections, topK);
+        return new CollectionParallelRetriever(retrieverService, innerRetrievalExecutor, accessScope)
+                .executeParallelRetrieval(question, collections, topK);
     }
 
     @Override

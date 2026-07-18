@@ -22,7 +22,10 @@ import org.apache.rocketmq.client.producer.SendResult;
 import java.util.function.Consumer;
 
 /**
- * 消息队列生产者接口
+ * 面向业务层的消息队列生产端口。
+ *
+ * <p>接口隔离 RocketMQTemplate，业务代码只表达“发送什么业务事件”和“本地事务做什么”，
+ * 从而便于替换基础设施或在测试中提供替身。</p>
  */
 public interface MessageQueueProducer {
 
@@ -38,9 +41,9 @@ public interface MessageQueueProducer {
     SendResult send(String topic, String keys, String bizDesc, Object body);
 
     /**
-     * 发送事务消息
+     * 发送 RocketMQ 事务消息。
      * <p>
-     * 流程：发送 half 消息 → 执行本地事务 → 根据结果 commit/rollback
+     * 流程：发送 half 消息 → 执行本地事务 → 根据结果 commit 或 rollback。
      * <p>
      * 事务回查由按 topic 注册的 {@link TransactionChecker} 处理，需提前通过
      * {@link DelegatingTransactionListener#registerChecker(String, TransactionChecker)} 注册

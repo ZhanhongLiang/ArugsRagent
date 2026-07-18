@@ -29,8 +29,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 文档摄取上下文实体类
- * 在文档摄取管道执行过程中，承载和传递所有中间数据和状态信息
+ * 一次文档摄取流水线的共享可变上下文。
+ *
+ * <p>Fetcher、Parser、Enhancer、Chunker、Indexer 等节点依次读写同一个对象，避免每个节点重新组装 DTO；
+ * 引擎负责记录节点日志和最终状态，异常也在这里汇总给任务服务。</p>
  */
 @Data
 @NoArgsConstructor
@@ -38,90 +40,57 @@ import java.util.Map;
 @Builder
 public class IngestionContext {
 
-    /**
-     * 摄取任务的唯一标识符
-     */
+    /** 摄取任务 id，用于日志、幂等、追踪和任务状态更新。 */
     private String taskId;
 
-    /**
-     * 执行本次摄取的管道ID
-     */
+    /** 本次执行使用的管道配置 id，决定节点顺序与每个节点参数。 */
     private String pipelineId;
 
-    /**
-     * 文档源信息
-     */
+    /** 原文档来源，FetcherNode 据此获取 rawBytes。 */
     private DocumentSource source;
 
-    /**
-     * 文档的原始字节数据
-     */
+    /** FetcherNode 产出的原始字节；上传入口也可提前预置以跳过下载。 */
     private byte[] rawBytes;
 
-    /**
-     * 文档的MIME类型
-     */
+    /** 原文 MIME 类型，ParserNode 用它选择 Markdown、Tika 等解析器。 */
     private String mimeType;
 
-    /**
-     * 解析后的原始文本内容
-     */
+    /** 解析后的纯文本，增强、切片等文本阶段的基础输入。 */
     private String rawText;
 
-    /**
-     * 结构化解析后的文档对象
-     */
+    /** 解析器保留的结构化文档及元数据。 */
     private StructuredDocument document;
 
-    /**
-     * 文档切分后的文本块列表
-     */
+    /** Chunker 生成的向量块列表，Indexer 最终写入向量存储。 */
     private List<VectorChunk> chunks;
 
-    /**
-     * 经过增强处理后的文本内容
-     */
+    /** Enhancer/Enricher 生成的增强文本，可替代或补充 rawText 参与切片。 */
     private String enhancedText;
 
-    /**
-     * 从文档中提取的关键词列表
-     */
+    /** 文档增强阶段抽取的关键词，供检索和展示使用。 */
     private List<String> keywords;
 
-    /**
-     * 基于文档内容生成的问题列表
-     */
+    /** 可选生成的示例问题，用于知识库运营或问答引导。 */
     private List<String> questions;
 
-    /**
-     * 摄取过程中的元数据信息
-     */
+    /** 节点间传递的扩展元数据，避免频繁扩大 Context 字段集合。 */
     private Map<String, Object> metadata;
 
-    /**
-     * 向量空间ID，指定向量数据写入的目标集合
-     * 如果不指定，则使用默认的向量空间
-     */
+    /** 指定向量写入的目标空间；为空时 Indexer 使用默认知识库空间。 */
     private VectorSpaceId vectorSpaceId;
 
-    /**
-     * 当前摄取任务的状态
-     */
+    /** 引擎推进的任务状态，例如运行中、成功、失败。 */
     private IngestionStatus status;
 
-    /**
-     * 管道执行过程中的节点日志列表
-     */
+    /** 每个节点产出的执行日志，最终可用于任务详情和故障排查。 */
     private List<NodeLog> logs;
 
-    /**
-     * 摄取过程中发生的异常信息
-     */
+    /** 未被节点消化的异常，任务服务据此持久化失败状态和错误信息。 */
     private Throwable error;
 
     /**
-     * 是否跳过 IndexerNode 的向量写入
-     * 为 true 时，IndexerNode 仅做校验不执行写入，由调用方统一在事务中完成向量持久化
+     * 是否跳过 IndexerNode 的真实向量写入。
+     * true 时节点仅做校验，调用方可把数据库更新与向量持久化放入更高层事务边界统一协调。
      */
     @Builder.Default
     private boolean skipIndexerWrite = false;

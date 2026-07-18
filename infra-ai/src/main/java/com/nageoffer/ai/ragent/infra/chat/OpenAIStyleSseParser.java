@@ -38,9 +38,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class OpenAIStyleSseParser {
 
+    /** OpenAI 兼容 SSE 数据行的固定前缀。 */
     private static final String DATA_PREFIX = "data:";
+    /** OpenAI 兼容协议用于标识流结束的特殊内容。 */
     private static final String DONE_MARKER = "[DONE]";
 
+    /**
+     * 解析一条供应商返回的物理 SSE 行。
+     *
+     * @param line 原始文本行，可能为空行、data 行或结束标记
+     * @param gson JSON 解析器
+     * @param reasoningEnabled 是否提取思考过程字段
+     * @return 解析出的内容、思考增量和完成标记
+     */
     static ParsedEvent parseLine(String line, Gson gson, boolean reasoningEnabled) {
         // SSE 事件之间常有空行；空行没有业务含义，返回 empty 让调用方跳过。
         if (line == null || line.isBlank()) {
@@ -74,6 +84,7 @@ public final class OpenAIStyleSseParser {
     }
 
     private static boolean hasFinishReason(JsonObject choice) {
+        // finish_reason 不为 null 即表示供应商已给出该 choice 的终止原因。
         if (choice == null || !choice.has("finish_reason")) {
             return false;
         }
@@ -114,18 +125,22 @@ public final class OpenAIStyleSseParser {
      */
     record ParsedEvent(String content, String reasoning, boolean completed) {
 
+        /** 创建没有有效业务字段的空事件。 */
         static ParsedEvent empty() {
             return new ParsedEvent(null, null, false);
         }
 
+        /** 创建协议结束事件，调用方收到后应结束读取循环。 */
         static ParsedEvent done() {
             return new ParsedEvent(null, null, true);
         }
 
+        /** 判断本行是否包含可发送给前端的正式回答增量。 */
         boolean hasContent() {
             return content != null && !content.isEmpty();
         }
 
+        /** 判断本行是否包含开启深度思考时需要保存的思考增量。 */
         boolean hasReasoning() {
             return reasoning != null && !reasoning.isEmpty();
         }

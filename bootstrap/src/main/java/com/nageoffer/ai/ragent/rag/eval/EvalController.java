@@ -20,6 +20,8 @@ package com.nageoffer.ai.ragent.rag.eval;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.nageoffer.ai.ragent.framework.convention.RetrievedChunk;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
+import com.nageoffer.ai.ragent.knowledge.access.service.KnowledgeAccessService;
 import com.nageoffer.ai.ragent.knowledge.dao.entity.KnowledgeChunkDO;
 import com.nageoffer.ai.ragent.knowledge.dao.entity.KnowledgeDocumentDO;
 import com.nageoffer.ai.ragent.knowledge.dao.mapper.KnowledgeChunkMapper;
@@ -60,14 +62,16 @@ public class EvalController {
     private final SearchChannelProperties searchProperties;
     private final KnowledgeChunkMapper knowledgeChunkMapper;
     private final KnowledgeDocumentMapper knowledgeDocumentMapper;
+    private final KnowledgeAccessService knowledgeAccessService;
 
     @GetMapping("/rag/eval")
     public Result<EvalResponse> chat(@RequestParam String question) {
         long start = System.currentTimeMillis();
+        KnowledgeAccessScope accessScope = knowledgeAccessService.currentAccessScope();
 
         RewriteResult rewriteResult = queryRewriteService.rewriteWithSplit(question, List.of());
-        List<SubQuestionIntent> subIntents = intentResolver.resolve(rewriteResult);
-        RetrievalContext rc = retrievalEngine.retrieve(subIntents, searchProperties.getDefaultTopK());
+        List<SubQuestionIntent> subIntents = intentResolver.resolve(rewriteResult, accessScope);
+        RetrievalContext rc = retrievalEngine.retrieve(subIntents, searchProperties.getDefaultTopK(), accessScope);
 
         return Results.success(buildResponse(rc, subIntents, System.currentTimeMillis() - start));
     }

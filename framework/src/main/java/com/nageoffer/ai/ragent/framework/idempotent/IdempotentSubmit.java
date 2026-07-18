@@ -23,19 +23,18 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 幂等注解，防止用户重复提交表单信息
+ * 标记 HTTP 写操作的提交幂等性。
+ *
+ * <p>切面会按 key 在 Redis 中原子占位；同一 key 的并发重复请求只允许一个进入业务方法，
+ * 其余请求得到指定提示。</p>
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface IdempotentSubmit {
 
-    /**
-     * 通过 SpEL 表达式生成的唯一 Key，优先级高于默认幂等逻辑
-     */
+    /** 通过 SpEL 生成的唯一业务 Key；为空时由切面按默认规则生成。 */
     String key() default "";
 
-    /**
-     * 触发幂等失败逻辑时，返回的错误提示信息
-     */
+    /** 发现同一幂等键已在处理中时返回给调用方的提示。 */
     String message() default "您操作太快，请稍后再试";
 }

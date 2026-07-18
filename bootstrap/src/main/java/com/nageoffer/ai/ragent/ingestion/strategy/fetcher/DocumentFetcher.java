@@ -21,22 +21,21 @@ import com.nageoffer.ai.ragent.ingestion.domain.context.DocumentSource;
 import com.nageoffer.ai.ragent.ingestion.domain.enums.SourceType;
 
 /**
- * 文档提取接口，用于从不同源获取文档数据
+ * 文档来源抓取策略端口。
+ *
+ * <p>FetcherNode 只根据 SourceType 查找实现，不依赖 HTTP、S3、飞书等具体协议；新增来源时新增实现即可，
+ * 不需要改动节点编排逻辑。</p>
  */
 public interface DocumentFetcher {
 
-    /**
-     * 获取支持的源类型
-     *
-     * @return 对应的源类型
-     */
+    /** @return 当前策略可处理的来源类型，也是 FetcherNode 策略注册表的键。 */
     SourceType supportedType();
 
     /**
-     * 从给定的源中抓取文档
+     * 从来源读取原始字节并补齐 MIME 类型、文件名等后续解析所需元数据。
      *
      * @param source 文档数据源
-     * @return 抓取结果，包含文档内容及其元数据
+     * @return 原始内容和元数据快照；异常由调用方转换为任务节点失败
      */
     FetchResult fetch(DocumentSource source);
 }

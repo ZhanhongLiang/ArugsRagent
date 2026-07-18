@@ -46,7 +46,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public final class IdempotentSubmitAspect {
 
+    /** Redisson 提供跨实例可见的分布式锁，防止同一请求落到不同节点仍被重复执行。 */
     private final RedissonClient redissonClient;
+    /** 将方法入参稳定序列化后计算摘要，用于构造默认幂等键。 */
     private final Gson gson = new Gson();
 
     @Value("${app.eval.enabled:false}")
@@ -58,21 +60,24 @@ public final class IdempotentSubmitAspect {
     @Around("@annotation(com.nageoffer.ai.ragent.framework.idempotent.IdempotentSubmit)")
     public Object idempotentSubmit(ProceedingJoinPoint joinPoint) throws Throwable {
         if (evalEnabled) {
+            // 评测会对同一问题多次调用，跳过 Web 幂等锁避免干扰批量测试。
             return joinPoint.proceed();
         }
+        // 读取目标方法声明的幂等策略，包括自定义 key 和重复提示语。
         IdempotentSubmit idempotentSubmit = getIdempotentSubmitAnnotation(joinPoint);
-        // 获取分布式锁标识
+        // 由显式 SpEL key 或“接口路径 + 用户 + 入参摘要”构造锁标识。
         String lockKey = buildLockKey(joinPoint, idempotentSubmit);
         RLock lock = redissonClient.getLock(lockKey);
-        // 尝试获取锁，获取锁失败就意味着已经重复提交，直接抛出异常
+        // tryLock 不等待：同一语义请求正在处理就立即拒绝，避免重复写库或重复发消息。
         if (!lock.tryLock()) {
             throw new ClientException(idempotentSubmit.message());
         }
         Object result;
         try {
-            // 执行标记了防重复提交注解的方法原逻辑
+            // 拿到锁后执行原业务逻辑。
             result = joinPoint.proceed();
         } finally {
+            // 无论成功或抛异常都释放锁，避免用户后续请求被永久阻塞。
             lock.unlock();
         }
         return result;
@@ -82,6 +87,7 @@ public final class IdempotentSubmitAspect {
      * @return 返回自定义防重复提交注解
      */
     public static IdempotentSubmit getIdempotentSubmitAnnotation(ProceedingJoinPoint joinPoint) throws NoSuchMethodException {
+        // 切面签名可能来自接口，需在目标实现类上重新定位方法以读取实际注解。
         MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
         Method targetMethod = joinPoint.getTarget().getClass().getDeclaredMethod(methodSignature.getName(), methodSignature.getMethod().getParameterTypes());
         return targetMethod.getAnnotation(IdempotentSubmit.class);
@@ -91,6 +97,7 @@ public final class IdempotentSubmitAspect {
      * @return 获取当前线程上下文 ServletPath
      */
     private String getServletPath() {
+        // 默认幂等键包含请求路径，防止不同接口但入参相同互相误伤。
         ServletRequestAttributes sra = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         return Objects.requireNonNull(sra).getRequest().getServletPath();
     }
@@ -99,6 +106,7 @@ public final class IdempotentSubmitAspect {
      * @return 当前操作用户 ID
      */
     private String getCurrentUserId() {
+        // 将用户 ID 纳入键空间，不同用户的相同操作不应互相抢锁。
         return UserContext.getUserId();
     }
 
@@ -106,15 +114,18 @@ public final class IdempotentSubmitAspect {
      * @return joinPoint md5
      */
     private String calcArgsMD5(ProceedingJoinPoint joinPoint) {
+        // 入参 JSON 取 MD5，既稳定区分请求又避免把大对象直接写进 Redis key。
         return DigestUtil.md5Hex(gson.toJson(joinPoint.getArgs()).getBytes(StandardCharsets.UTF_8));
     }
 
     private String buildLockKey(ProceedingJoinPoint joinPoint, IdempotentSubmit idempotentSubmit) {
         if (StrUtil.isNotBlank(idempotentSubmit.key())) {
+            // 优先尊重业务显式声明的 SpEL key，例如按会话、订单或用户维度去重。
             MethodSignature signature = (MethodSignature) joinPoint.getSignature();
             Object keyValue = SpELUtil.parseKey(idempotentSubmit.key(), signature.getMethod(), joinPoint.getArgs());
             return String.format("idempotent-submit:key:%s", keyValue);
         }
+        // 未配置 key 时退化为请求路径、当前用户和全部入参的组合键。
         return String.format(
                 "idempotent-submit:path:%s:currentUserId:%s:md5:%s",
                 getServletPath(),

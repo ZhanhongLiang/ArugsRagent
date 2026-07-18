@@ -20,6 +20,7 @@ package com.nageoffer.ai.ragent.rag.service.pipeline;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.nageoffer.ai.ragent.framework.convention.ChatMessage;
+import com.nageoffer.ai.ragent.knowledge.access.service.KnowledgeAccessService;
 import com.nageoffer.ai.ragent.framework.convention.ChatRequest;
 import com.nageoffer.ai.ragent.infra.chat.LLMService;
 import com.nageoffer.ai.ragent.infra.chat.StreamCallback;
@@ -80,11 +81,13 @@ public class StreamChatPipeline {
     private final RAGPromptService promptBuilder;
     private final PromptTemplateLoader promptTemplateLoader;
     private final StreamTaskManager taskManager;
+    private final KnowledgeAccessService knowledgeAccessService;
 
     /**
      * 执行一次流式问答。
      */
     public void execute(StreamChatContext ctx) {
+        ctx.setKnowledgeAccessScope(knowledgeAccessService.currentAccessScope());
         // 阶段 1：加载历史记忆，并把当前用户问题追加为最新 user 消息。
         loadMemory(ctx);
         // 阶段 2：问题改写与子问题拆分，解决“用户说的话不等于该搜的词”。
@@ -138,7 +141,8 @@ public class StreamChatPipeline {
      * 阶段 3：意图树解析，为每个子问题选择知识库或 MCP 工具意图。
      */
     private void resolveIntents(StreamChatContext ctx) {
-        List<SubQuestionIntent> subIntents = intentResolver.resolve(ctx.getRewriteResult());
+        List<SubQuestionIntent> subIntents = intentResolver.resolve(
+                ctx.getRewriteResult(), ctx.getKnowledgeAccessScope());
         ctx.setSubIntents(subIntents);
     }
 
@@ -192,6 +196,7 @@ public class StreamChatPipeline {
                 ctx.getCallback()
         );
         // bindHandle 的时机在 llmService.streamChat 返回之后；如果用户已经点停止，StreamTaskManager 会立即 cancel 该句柄。
+        // 因为用户有可能会没等到模型输出就点了停止，所以这个句柄是用来控制停止的，
         taskManager.bindHandle(ctx.getTaskId(), handle);
         return true;
     }
@@ -200,7 +205,8 @@ public class StreamChatPipeline {
      * 阶段 6：检索知识库上下文和 MCP 工具上下文。
      */
     private RetrievalContext retrieve(StreamChatContext ctx) {
-        return retrievalEngine.retrieve(ctx.getSubIntents(), searchProperties.getDefaultTopK());
+        return retrievalEngine.retrieve(
+                ctx.getSubIntents(), searchProperties.getDefaultTopK(), ctx.getKnowledgeAccessScope());
     }
 
     /**
@@ -230,9 +236,13 @@ public class StreamChatPipeline {
                 mergedGroup,
                 ctx.getHistory(),
                 ctx.isDeepThinking(),
-                ctx.getCallback()
+                ctx.getCallback() // 这个是ctx里面定义的回调函数
         );
         // 标准 RAG 流式调用也需要绑定取消句柄，停止生成才能打断底层 OkHttp SSE 读取。
+        //注意返回值——`streamChat()` 返回一个 `StreamCancellationHandle`，也就是取消句柄。
+        // 拿到句柄后，`streamRagResponse()` 立即通过 `taskManager.bindHandle()` 把它绑定到当前任务。
+        // 用户按下停止键之后，可以中断流，就是使用取消句柄
+        // handel句柄
         taskManager.bindHandle(ctx.getTaskId(), handle);
     }
 

@@ -1,0 +1,332 @@
+{
+  "QJ-VC-001": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-001.md"
+  },
+  "QJ-VC-002": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-002.md"
+  },
+  "QJ-VC-003": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-003.md"
+  },
+  "QJ-VC-004": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-004.md"
+  },
+  "QJ-VC-005": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-005.md"
+  },
+  "QJ-VC-006": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-006.md"
+  },
+  "QJ-VC-007": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-007.md"
+  },
+  "QJ-VC-008": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-008.md"
+  },
+  "QJ-VC-009": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-009.md"
+  },
+  "QJ-VC-010": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-VC-010.md"
+  },
+  "QJ-AIR-001": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-AIR-001.md"
+  },
+  "QJ-AIR-002": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-AIR-002.md"
+  },
+  "QJ-AIR-003": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-AIR-003.md"
+  },
+  "QJ-AIR-004": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-AIR-004.md"
+  },
+  "QJ-AIR-005": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-AIR-005.md"
+  },
+  "QJ-AIR-006": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-AIR-006.md"
+  },
+  "QJ-AIR-007": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-AIR-007.md"
+  },
+  "QJ-AIR-008": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-AIR-008.md"
+  },
+  "QJ-CARE-001": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-CARE-001.md"
+  },
+  "QJ-CARE-002": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-CARE-002.md"
+  },
+  "QJ-CARE-003": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-CARE-003.md"
+  },
+  "QJ-CARE-004": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-CARE-004.md"
+  },
+  "QJ-CARE-005": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-CARE-005.md"
+  },
+  "QJ-CARE-006": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-CARE-006.md"
+  },
+  "QJ-CARE-007": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-CARE-007.md"
+  },
+  "QJ-CARE-008": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-CARE-008.md"
+  },
+  "QJ-ACC-001": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-001.md"
+  },
+  "QJ-ACC-002": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-002.md"
+  },
+  "QJ-ACC-003": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-003.md"
+  },
+  "QJ-ACC-004": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-004.md"
+  },
+  "QJ-ACC-005": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-005.md"
+  },
+  "QJ-ACC-006": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-006.md"
+  },
+  "QJ-ACC-007": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-007.md"
+  },
+  "QJ-ACC-008": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-008.md"
+  },
+  "QJ-ACC-009": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-009.md"
+  },
+  "QJ-ACC-010": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-010.md"
+  },
+  "QJ-ACC-011": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-011.md"
+  },
+  "QJ-ACC-012": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-012.md"
+  },
+  "QJ-ACC-013": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-013.md"
+  },
+  "QJ-ACC-014": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-014.md"
+  },
+  "QJ-ACC-015": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-015.md"
+  },
+  "QJ-ACC-016": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-016.md"
+  },
+  "QJ-ACC-017": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-017.md"
+  },
+  "QJ-ACC-018": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-ACC-018.md"
+  },
+  "QJ-GIFT-001": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-GIFT-001.md"
+  },
+  "QJ-GIFT-002": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-GIFT-002.md"
+  },
+  "QJ-GIFT-003": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-GIFT-003.md"
+  },
+  "QJ-GIFT-004": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-GIFT-004.md"
+  },
+  "QJ-GIFT-005": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-GIFT-005.md"
+  },
+  "QJ-GIFT-006": {
+    "kb_key": "product",
+    "category": "sku",
+    "rel_path": "knowledge_base/01_product/sku/QJ-GIFT-006.md"
+  },
+  "GUIDE_QJ_VAC_001": {
+    "kb_key": "product",
+    "category": "guide",
+    "rel_path": "knowledge_base/01_product/guide/GUIDE_QJ_VAC_001.md"
+  },
+  "GUIDE_QJ_AIR_001": {
+    "kb_key": "product",
+    "category": "guide",
+    "rel_path": "knowledge_base/01_product/guide/GUIDE_QJ_AIR_001.md"
+  },
+  "GUIDE_QJ_CARE_001": {
+    "kb_key": "product",
+    "category": "guide",
+    "rel_path": "knowledge_base/01_product/guide/GUIDE_QJ_CARE_001.md"
+  },
+  "GUIDE_QJ_COMPARE_001": {
+    "kb_key": "product",
+    "category": "guide",
+    "rel_path": "knowledge_base/01_product/guide/GUIDE_QJ_COMPARE_001.md"
+  },
+  "MANUAL_QJ_VAC_001": {
+    "kb_key": "manual",
+    "category": "device",
+    "rel_path": "knowledge_base/02_manual/device/MANUAL_QJ_VAC_001.md"
+  },
+  "MANUAL_QJ_AIR_001": {
+    "kb_key": "manual",
+    "category": "device",
+    "rel_path": "knowledge_base/02_manual/device/MANUAL_QJ_AIR_001.md"
+  },
+  "MANUAL_QJ_CARE_001": {
+    "kb_key": "manual",
+    "category": "device",
+    "rel_path": "knowledge_base/02_manual/device/MANUAL_QJ_CARE_001.md"
+  },
+  "MANUAL_QJ_APP_001": {
+    "kb_key": "manual",
+    "category": "app",
+    "rel_path": "knowledge_base/02_manual/app/MANUAL_QJ_APP_001.md"
+  },
+  "POLICY_QJ_WARRANTY_001": {
+    "kb_key": "policy",
+    "category": "service",
+    "rel_path": "knowledge_base/03_policy/service/POLICY_QJ_WARRANTY_001.md"
+  },
+  "POLICY_QJ_RETURN_001": {
+    "kb_key": "policy",
+    "category": "service",
+    "rel_path": "knowledge_base/03_policy/service/POLICY_QJ_RETURN_001.md"
+  },
+  "POLICY_QJ_INVOICE_001": {
+    "kb_key": "policy",
+    "category": "service",
+    "rel_path": "knowledge_base/03_policy/service/POLICY_QJ_INVOICE_001.md"
+  },
+  "POLICY_QJ_PRIVACY_001": {
+    "kb_key": "policy",
+    "category": "service",
+    "rel_path": "knowledge_base/03_policy/service/POLICY_QJ_PRIVACY_001.md"
+  },
+  "FAQ_QJ_VAC_001": {
+    "kb_key": "faq",
+    "category": "trouble",
+    "rel_path": "knowledge_base/04_faq/trouble/FAQ_QJ_VAC_001.md"
+  },
+  "FAQ_QJ_AIR_001": {
+    "kb_key": "faq",
+    "category": "trouble",
+    "rel_path": "knowledge_base/04_faq/trouble/FAQ_QJ_AIR_001.md"
+  },
+  "FAQ_QJ_CARE_001": {
+    "kb_key": "faq",
+    "category": "trouble",
+    "rel_path": "knowledge_base/04_faq/trouble/FAQ_QJ_CARE_001.md"
+  },
+  "FAQ_QJ_APP_001": {
+    "kb_key": "faq",
+    "category": "trouble",
+    "rel_path": "knowledge_base/04_faq/trouble/FAQ_QJ_APP_001.md"
+  }
+}

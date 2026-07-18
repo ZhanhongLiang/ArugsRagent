@@ -54,6 +54,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 
+/**
+ * 意图树管理服务。
+ *
+ * <p>管理端保存的是扁平 parentCode 结构，查询时组装成树；每次变更都会清除 Redis 缓存，
+ * 使在线分类器下次读取到最新节点、示例和知识库/MCP 绑定。</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentNodeDO> implements IntentTreeService {
@@ -65,6 +71,7 @@ public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentN
 
     @Override
     public List<IntentNodeTreeVO> getFullTree() {
+        // 先一次性查全量节点再按 parentCode 分组，避免递归组树产生 N+1 查询。
         List<IntentNodeDO> list = this.list(new LambdaQueryWrapper<IntentNodeDO>()
                 .eq(IntentNodeDO::getDeleted, 0)
                 .orderByAsc(IntentNodeDO::getSortOrder, IntentNodeDO::getId));
@@ -76,7 +83,7 @@ public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentN
                     return parent == null ? "ROOT" : parent;
                 }));
 
-        // 根节点：parentCode 为空
+        // 根节点：parentCode 为空；孤儿节点不会自动提升为根节点，便于暴露配置问题。
         List<IntentNodeDO> roots = parentMap.getOrDefault("ROOT", Collections.emptyList());
 
         // 递归构建树
@@ -93,6 +100,7 @@ public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentN
         List<IntentNodeDO> children = parentMap.getOrDefault(current.getIntentCode(), Collections.emptyList());
 
         if (!CollectionUtils.isEmpty(children)) {
+            // 递归只在内存列表中进行，不会再次访问数据库。
             List<IntentNodeTreeVO> childVOs = children.stream()
                     .map(child -> buildTree(child, parentMap))
                     .collect(Collectors.toList());
@@ -105,7 +113,7 @@ public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentN
 
     @Override
     public String createNode(IntentNodeCreateRequest requestParam) {
-        // 简单重复校验：intentCode 不允许重复
+        // intentCode 是分类模型输出后回查节点的稳定标识，不能重复。
         long count = this.count(new LambdaQueryWrapper<IntentNodeDO>()
                 .eq(IntentNodeDO::getIntentCode, requestParam.getIntentCode())
                 .eq(IntentNodeDO::getDeleted, 0));
@@ -113,6 +121,7 @@ public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentN
             throw new ClientException("意图标识已存在: " + requestParam.getIntentCode());
         }
 
+        // 可检索 KB 叶子节点必须绑定知识库，否则后续无法定位向量集合。
         if (Objects.equals(requestParam.getLevel(), IntentLevel.TOPIC.getCode())
                 && Objects.equals(requestParam.getKind(), IntentKind.KB.getCode())
                 && StrUtil.isBlank(requestParam.getKbId())) {
@@ -124,6 +133,7 @@ public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentN
                 .kbId(
                         StrUtil.isNotBlank(requestParam.getKbId()) ? requestParam.getKbId() : null
                 )
+                // 创建时从知识库反查 collectionName，把业务 KB 绑定转为检索运行时可用集合名。
                 .collectionName(
                         StrUtil.isNotBlank(requestParam.getKbId()) ? knowledgeBaseMapper.selectById(requestParam.getKbId()).getCollectionName() : null
                 )
@@ -155,7 +165,7 @@ public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentN
 
         this.save(node);
 
-        // 清除Redis缓存，下次读取时会重新从数据库加载
+        // 不同步重建缓存，避免管理写请求承担完整树的序列化成本。
         intentTreeCacheManager.clearIntentTreeCache();
 
         return String.valueOf(node.getId());
@@ -163,6 +173,7 @@ public class IntentTreeServiceImpl extends ServiceImpl<IntentNodeMapper, IntentN
 
     @Override
     public void updateNode(String id, IntentNodeUpdateRequest req) {
+        // 采用非空字段部分更新，未传字段保持原有配置。
         IntentNodeDO node = this.getById(id);
         if (node == null || Objects.equals(node.getDeleted(), 1)) {
             throw new ServiceException("节点不存在或已删除: id=" + id);

@@ -58,6 +58,7 @@ public class McpClientAutoConfiguration {
         }
 
         for (McpClientProperties.ServerConfig server : servers) {
+            // 会将MCP注册到
             registerRemoteTools(server);
         }
     }
@@ -101,8 +102,12 @@ public class McpClientAutoConfiguration {
                 return;
             }
             log.info("MCP Server [{}] 返回 {} 个工具", serverName, tools.size());
+            // 注册到Map<String, McpToolExecutor> executorMap里面，因为DefaultMcpToolRegistry实现了McpToolRegistry接口
+            // 调用的是DefaultMcpToolRegistry的register
 
+            // 启动扫描发现tools，这些tools是mcp-server那边已经构建好了，里面包含了tools的各种定义
             for (Tool tool : tools) {
+                // 然后将tool包装成McpClientToolExecutor类执行器
                 McpClientToolExecutor executor = new McpClientToolExecutor(client, tool);
                 toolRegistry.register(executor);
             }

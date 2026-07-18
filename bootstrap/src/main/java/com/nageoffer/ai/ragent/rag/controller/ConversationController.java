@@ -37,8 +37,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 会话控制器
- * 提供会话相关的REST API接口，包括会话列表获取、重命名、删除以及会话消息列表获取等功能
+ * 当前登录用户的会话 REST 入口。
+ *
+ * <p>控制器不接收 userId 参数，而是统一从 {@code UserContext} 取得身份，
+ * 防止客户端通过替换用户 ID 访问他人的会话或消息。</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -52,6 +54,7 @@ public class ConversationController {
      */
     @GetMapping("/conversations")
     public Result<List<ConversationVO>> listConversations() {
+        // 服务层按用户 ID 和逻辑删除标记过滤，再按最近活跃时间排序。
         return Results.success(conversationService.listByUserId(UserContext.getUserId()));
     }
 
@@ -61,6 +64,7 @@ public class ConversationController {
     @PutMapping("/conversations/{conversationId}")
     public Result<Void> rename(@PathVariable String conversationId,
                                @RequestBody ConversationUpdateRequest request) {
+        // 会话归属和标题长度由服务层校验，控制器仅负责 HTTP 参数绑定。
         conversationService.rename(conversationId, request);
         return Results.success();
     }
@@ -70,6 +74,7 @@ public class ConversationController {
      */
     @DeleteMapping("/conversations/{conversationId}")
     public Result<Void> delete(@PathVariable String conversationId) {
+        // 服务层在事务内级联清理消息和摘要，避免本层拆分多个删除接口。
         conversationService.delete(conversationId);
         return Results.success();
     }
@@ -79,6 +84,7 @@ public class ConversationController {
      */
     @GetMapping("/conversations/{conversationId}/messages")
     public Result<List<ConversationMessageVO>> listMessages(@PathVariable String conversationId) {
+        // 普通会话页按自然时间顺序展示全部消息；分页场景可由后续接口扩展参数。
         return Results.success(conversationMessageService.listMessages(conversationId, UserContext.getUserId(), null, ConversationMessageOrder.ASC));
     }
 }

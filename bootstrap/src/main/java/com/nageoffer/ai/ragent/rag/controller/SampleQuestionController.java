@@ -37,7 +37,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 示例问题控制器（欢迎页展示）
+ * 欢迎页示例问题与其管理数据的 REST 入口。
+ * 随机列表和后台 CRUD 复用同一数据源，但面向不同页面场景。
  */
 @RestController
 @RequiredArgsConstructor
@@ -50,6 +51,7 @@ public class SampleQuestionController {
      */
     @GetMapping("/rag/sample-questions")
     public Result<List<SampleQuestionVO>> listSampleQuestions() {
+        // 欢迎页只需要少量随机引导问题，不暴露管理分页信息。
         return Results.success(sampleQuestionService.listRandomQuestions());
     }
 

@@ -35,6 +35,14 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ChunkingStrategyFactory {
 
+    /*
+     * Factory for chunking strategies.
+     *
+     * All ChunkingStrategy beans are auto-discovered by Spring and registered by ChunkingMode.
+     * Adding a new chunking algorithm should only require a new strategy bean plus enum config,
+     * not changes to KnowledgeDocumentService.
+     */
+
     private final List<ChunkingStrategy> chunkingStrategies;
     private volatile Map<ChunkingMode, ChunkingStrategy> strategies = Map.of();
 
@@ -65,6 +73,7 @@ public class ChunkingStrategyFactory {
 
     @PostConstruct
     public void init() {
+        // Fail fast on duplicate strategy types so document ingestion never uses an ambiguous chunker.
         Map<ChunkingMode, ChunkingStrategy> map = new EnumMap<>(ChunkingMode.class);
 
         chunkingStrategies.forEach(s -> {

@@ -29,27 +29,33 @@ import org.springframework.util.StringUtils;
 import java.io.InputStream;
 
 /**
- * S3对象存储文档提取器
- * 支持从S3兼容的对象存储（如RustFS）中获取文档，示例路径：s3://biz/5fb28010e16c4083ab07ca41f29804b0.md
+ * S3 兼容对象存储文档抓取策略。
+ *
+ * <p>上传接口先将文件保存到 S3，再把 s3:// URI 放进 DocumentSource；此策略在管道执行时打开对象流，
+ * 从而不依赖应用节点本地磁盘。</p>
  */
 @Component
 @RequiredArgsConstructor
 public class S3Fetcher implements DocumentFetcher {
 
+    /** 屏蔽具体 RustFS/MinIO/S3 SDK 的对象读取端口。 */
     private final FileStorageService fileStorageService;
 
     @Override
+    /** @return S3 来源类型。 */
     public SourceType supportedType() {
         return SourceType.S3;
     }
 
     @Override
+    /** 校验 s3:// 格式后读取对象完整字节、补齐文件名并探测 MIME 类型。 */
     public FetchResult fetch(DocumentSource source) {
         String location = source.getLocation();
         if (!StringUtils.hasText(location)) {
             throw new ServiceException("S3路径不能为空");
         }
 
+        // 显式拒绝普通路径，避免把错误配置静默交给底层对象存储。
         if (!location.startsWith("s3://")) {
             throw new ServiceException("无效的S3路径格式，应以 s3:// 开头: " + location);
         }

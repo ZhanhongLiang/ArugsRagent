@@ -29,6 +29,76 @@ COMMENT ON COLUMN t_user.create_time IS '创建时间';
 COMMENT ON COLUMN t_user.update_time IS '更新时间';
 COMMENT ON COLUMN t_user.deleted IS '是否删除 0：正常 1：删除';
 
+-- ============================================
+-- Workshop / Team Knowledge Data Access Tables
+-- ============================================
+
+CREATE TABLE t_workshop (
+    id          VARCHAR(20)  NOT NULL PRIMARY KEY,
+    code        VARCHAR(64)  NOT NULL,
+    name        VARCHAR(128) NOT NULL,
+    enabled     SMALLINT     NOT NULL DEFAULT 1,
+    create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    CONSTRAINT uk_workshop_code UNIQUE (code)
+);
+COMMENT ON TABLE t_workshop IS '车间组织单元表';
+
+CREATE TABLE t_workshop_team (
+    id          VARCHAR(20)  NOT NULL PRIMARY KEY,
+    workshop_id VARCHAR(20)  NOT NULL,
+    code        VARCHAR(64)  NOT NULL,
+    name        VARCHAR(128) NOT NULL,
+    enabled     SMALLINT     NOT NULL DEFAULT 1,
+    create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    CONSTRAINT uk_workshop_team_code UNIQUE (workshop_id, code)
+);
+CREATE INDEX idx_workshop_team_workshop_id ON t_workshop_team (workshop_id);
+COMMENT ON TABLE t_workshop_team IS '车间下属班组表';
+
+CREATE TABLE t_user_data_scope (
+    id          VARCHAR(20) NOT NULL PRIMARY KEY,
+    user_id     VARCHAR(20) NOT NULL,
+    scope_type  VARCHAR(16) NOT NULL,
+    workshop_id VARCHAR(20) NOT NULL,
+    team_id     VARCHAR(20),
+    create_time TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_user_data_scope_type CHECK (
+        (scope_type = 'WORKSHOP' AND team_id IS NULL)
+        OR (scope_type = 'TEAM' AND team_id IS NOT NULL)
+    )
+);
+CREATE UNIQUE INDEX uk_user_data_scope ON t_user_data_scope
+    (user_id, scope_type, workshop_id, COALESCE(team_id, ''));
+CREATE INDEX idx_user_data_scope_user_id ON t_user_data_scope (user_id);
+COMMENT ON TABLE t_user_data_scope IS '用户车间和班组数据范围表';
+
+CREATE TABLE t_knowledge_resource_scope (
+    id            VARCHAR(20) NOT NULL PRIMARY KEY,
+    resource_type VARCHAR(32) NOT NULL,
+    resource_id   VARCHAR(20) NOT NULL,
+    scope_type    VARCHAR(16) NOT NULL,
+    workshop_id   VARCHAR(20),
+    team_id       VARCHAR(20),
+    created_by    VARCHAR(20),
+    create_time   TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time   TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_knowledge_resource_type CHECK (resource_type IN ('KNOWLEDGE_BASE', 'DOCUMENT')),
+    CONSTRAINT ck_knowledge_resource_scope_type CHECK (
+        (scope_type = 'GLOBAL' AND workshop_id IS NULL AND team_id IS NULL)
+        OR (scope_type = 'WORKSHOP' AND workshop_id IS NOT NULL AND team_id IS NULL)
+        OR (scope_type = 'TEAM' AND workshop_id IS NOT NULL AND team_id IS NOT NULL)
+    )
+);
+CREATE UNIQUE INDEX uk_knowledge_resource_scope ON t_knowledge_resource_scope
+    (resource_type, resource_id, scope_type, COALESCE(workshop_id, ''), COALESCE(team_id, ''));
+CREATE INDEX idx_knowledge_resource_scope_resource ON t_knowledge_resource_scope (resource_type, resource_id);
+COMMENT ON TABLE t_knowledge_resource_scope IS '知识库和文档的车间班组访问范围表';
+
 CREATE TABLE t_conversation (
     id              VARCHAR(20) NOT NULL PRIMARY KEY,
     conversation_id VARCHAR(20) NOT NULL,

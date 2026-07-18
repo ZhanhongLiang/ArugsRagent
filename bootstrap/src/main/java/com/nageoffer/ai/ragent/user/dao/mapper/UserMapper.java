@@ -20,5 +20,9 @@ package com.nageoffer.ai.ragent.user.dao.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.nageoffer.ai.ragent.user.dao.entity.UserDO;
 
+/**
+ * 用户表 MyBatis-Plus Mapper。
+ * 通用 CRUD、分页和逻辑删除条件由 BaseMapper 与服务层的 LambdaWrapper 组合完成。
+ */
 public interface UserMapper extends BaseMapper<UserDO> {
 }

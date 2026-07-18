@@ -23,24 +23,21 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 幂等注解，防止消息队列消费者重复消费消息
+ * 标记 MQ 消费方法的幂等性。
+ *
+ * <p>Broker 至少一次投递和网络重试都会让同一消息多次到达；消费切面使用 key 与状态机保证
+ * 已成功处理的消息不重复执行业务副作用。</p>
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface IdempotentConsume {
 
-    /**
-     * 设置防重令牌 Key 前缀
-     */
+    /** 防重 Redis Key 前缀，用于隔离不同消费者的命名空间。 */
     String keyPrefix() default "";
 
-    /**
-     * 通过 SpEL 表达式生成的唯一 Key
-     */
+    /** 用 SpEL 从消息载荷中提取的唯一业务键。 */
     String key();
 
-    /**
-     * 设置防重令牌 Key 过期时间，单位秒，默认 1 小时
-     */
+    /** 防重状态过期时间（秒）；应覆盖消息可能重复投递的时间窗口。 */
     long keyTimeout() default 3600L;
 }

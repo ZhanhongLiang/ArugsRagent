@@ -21,6 +21,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.nageoffer.ai.ragent.framework.convention.RetrievedChunk;
 import com.nageoffer.ai.ragent.framework.trace.RagTraceNode;
+import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
 import com.nageoffer.ai.ragent.rag.config.SearchChannelProperties;
 import com.nageoffer.ai.ragent.rag.core.intent.IntentNode;
 import com.nageoffer.ai.ragent.rag.core.intent.NodeScore;
@@ -75,6 +76,15 @@ public class RetrievalEngine {
      */
     @RagTraceNode(name = "retrieval-engine", type = "RETRIEVE")
     public RetrievalContext retrieve(List<SubQuestionIntent> subIntents, int topK) {
+        return retrieve(subIntents, topK, null);
+    }
+
+    /**
+     * 在同一请求中将权限快照传递给每个并发子问题的知识库检索。
+     */
+    public RetrievalContext retrieve(List<SubQuestionIntent> subIntents,
+                                     int topK,
+                                     KnowledgeAccessScope accessScope) {
         // 校验问题是否是空的
         if (CollUtil.isEmpty(subIntents)) {
             return RetrievalContext.builder()
@@ -83,13 +93,15 @@ public class RetrievalEngine {
         }
 
         int finalTopK = topK > 0 ? topK : searchProperties.getDefaultTopK();
+        // 每个子问题用线程并发执行
         List<CompletableFuture<SubQuestionContext>> tasks = subIntents.stream() //还是并发执行，确保每个子问题同时开始
                 .map(si -> CompletableFuture.supplyAsync(
                         () -> {
                             try {
                                 return buildSubQuestionContext(
                                         si,
-                                        resolveSubQuestionTopK(si, finalTopK)
+                                        resolveSubQuestionTopK(si, finalTopK),
+                                        accessScope
                                 );
                             } catch (Exception e) {
                                 log.error("子问题上下文构建失败，降级为空上下文，question：{}", si.subQuestion(), e);
@@ -99,11 +111,13 @@ public class RetrievalEngine {
                         ragContextExecutor // 专用线程池, 这个是外层线程池
                 ))
                 .toList();
+        // 最后合并不同线程的子问题上下文
         List<SubQuestionContext> contexts = tasks.stream()
                 .map(CompletableFuture::join)
                 .toList();
 
         Map<String, List<RetrievedChunk>> mergedIntentChunks = new HashMap<>();
+        // 把每个  子意图：chunks列表  将所有子问题的intentChunks扁平化，放在一个列表里面
         for (SubQuestionContext context : contexts) {
             if (CollUtil.isNotEmpty(context.intentChunks())) {
                 mergedIntentChunks.putAll(context.intentChunks());
@@ -135,10 +149,11 @@ public class RetrievalEngine {
                     appendSection(mcpBuilder, "sub-question-mcp-wrapper", globalIndex, context.question(), context.mcpContext());
                 }
             }
+            // 相当于把kbBuilder和mcpBuilder里面添加section、globalIndex、context的子问题、上下文结果
             kbContext = kbBuilder.toString().trim();
             mcpContext = mcpBuilder.toString().trim();
         }
-
+        // 相当于把多个子问题的MCP上下文、kb上下文、子意图chunks列表
         return RetrievalContext.builder()
                 .mcpContext(mcpContext)
                 .kbContext(kbContext)
@@ -155,16 +170,19 @@ public class RetrievalEngine {
      * @param topK
      * @return
      */
-    private SubQuestionContext buildSubQuestionContext(SubQuestionIntent intent, int topK) {
+    private SubQuestionContext buildSubQuestionContext(SubQuestionIntent intent,
+                                                        int topK,
+                                                        KnowledgeAccessScope accessScope) {
         List<NodeScore> kbIntents = NodeScoreFilters.kb(intent.nodeScores()); // 过滤 KB 类型意图（node 非空、kind 为 null 或 KB）
         List<NodeScore> mcpIntents = NodeScoreFilters.mcp(intent.nodeScores()); //过滤 MCP 类型意图（node 非空、kind=MCP、mcpToolId 非空）
-        // 检索主要入口, 重点分析这里
-        KbResult kbResult = retrieveAndRerank(intent, kbIntents, topK);
+        // 检索主要入口, 重点分析这里, 最后得到包装后的KbResult结果,
+        KbResult kbResult = retrieveAndRerank(intent, kbIntents, topK, accessScope);
         // MCP工具主要调用入口
         String mcpContext = CollUtil.isNotEmpty(mcpIntents)
                 ? executeMcpAndMerge(intent.subQuestion(), mcpIntents)
                 : "";
-
+        // 将mcpContext上下文、kbResult检索上下文、kbResult的节点：chunks列表、intent的子问题(因为是并行，所以这里是一个子问题)
+        // 包装成了SubQuestionContext上下文这种
         return new SubQuestionContext(intent.subQuestion(), kbResult.groupedContext(), mcpContext, kbResult.intentChunks());
     }
 
@@ -192,21 +210,32 @@ public class RetrievalEngine {
                 "context", context
         )));
     }
-
+    // MCP入口
     private String executeMcpAndMerge(String question, List<NodeScore> mcpIntents) {
         if (CollUtil.isEmpty(mcpIntents)) {
             return "";
         }
-        // 主要入口
+        // 主要入口， 返回toolID 和 List<CallToolResult>形式， 因为一个toolID有可能对应多个执行结果
         Map<String, List<CallToolResult>> toolResults = executeMcpTools(question, mcpIntents);
         if (toolResults.isEmpty()) {
             return "";
         }
-
+        // 根据MCP工具调用结果+MCP意图叶子节点进行上下文拼接
+        // 最终得到LLM可以调用的MCP上下文信息
         return contextFormatter.formatMcpContext(toolResults, mcpIntents);
     }
 
-    private KbResult retrieveAndRerank(SubQuestionIntent intent, List<NodeScore> kbIntents, int topK) {
+    /**
+     *
+     * @param intent
+     * @param kbIntents
+     * @param topK
+     * @return
+     */
+    private KbResult retrieveAndRerank(SubQuestionIntent intent,
+                                       List<NodeScore> kbIntents,
+                                       int topK,
+                                       KnowledgeAccessScope accessScope) {
         // 使用多通道检索引擎（是否启用全局检索由置信度阈值决定）
         List<SubQuestionIntent> subIntents = List.of(intent);
         /**
@@ -218,13 +247,16 @@ public class RetrievalEngine {
          *
          * 两个通道不是二选一——根据条件，可能只激活定向检索，可能只激活全局检索，也可能两个同时激活。
          */
-        List<RetrievedChunk> chunks = multiChannelRetrievalEngine.retrieveKnowledgeChannels(subIntents, topK);
+        // 经过意图向量检索+全局向量检索+全局关键词检索 + 去重 + Rerank(TopK)最后得到某个子问题的候选切片数
+        List<RetrievedChunk> chunks = accessScope == null
+                ? multiChannelRetrievalEngine.retrieveKnowledgeChannels(subIntents, topK)
+                : multiChannelRetrievalEngine.retrieveKnowledgeChannels(subIntents, topK, accessScope);
 
         if (CollUtil.isEmpty(chunks)) {
             return KbResult.empty();
         }
 
-        // 按意图节点分组（用于格式化上下文）
+        // 按意图节点分组（用于格式化上下文），意图子节点ID : List<RetrievedChunk>
         Map<String, List<RetrievedChunk>> intentChunks = new HashMap<>();
 
         // 如果有意图识别结果，按意图节点 ID 分组
@@ -239,7 +271,10 @@ public class RetrievalEngine {
             // 如果没有意图识别结果，使用特殊 key
             intentChunks.put(MULTI_CHANNEL_KEY, chunks);
         }
-
+        // 合并意图叶子节点中的前端人工填写的规则
+        // 将kbIntents 意图子节点、 意图子节点(是之前经过意图识别后的也意图子节点)传入
+        //多意图检索时，不能把所有 Chunk 混在一起直接丢给模型，否则模型不知道哪些内容属于哪个业务方向。
+        // formatMultiIntentContext 会按意图分组，把上下文组织得更清楚，让模型回答组合问题时更稳定。
         String groupedContext = contextFormatter.formatKbContext(kbIntents, intentChunks, topK);
         return new KbResult(groupedContext, intentChunks);
     }
@@ -251,18 +286,21 @@ public class RetrievalEngine {
      * - **单工具失败不阻断**：`try-catch` 在每个 future 内部，一个工具调用失败返回失败的 `ToolOutput`，其他工具不受影响。
      *
      */
+    // 返回<toolID, List<CallToolResult>>的结果
     private Map<String, List<CallToolResult>> executeMcpTools(String question,
                                                               List<NodeScore> mcpIntentScores) {
         if (CollUtil.isEmpty(mcpIntentScores)) {
             return Map.of();
         }
         // 打分节点流，还是并发操作，就是有可能一个子问题存在两个MCP意图
+        // MCP也是并发的，线程
         List<CompletableFuture<ToolOutput>> futures = mcpIntentScores.stream()
                 .map(ns -> CompletableFuture.supplyAsync(
                         () -> {
                             String toolId = ns.getNode().getMcpToolId();
                             try { // 并发内部try兜底
                                 CallToolResult result = executeSingleMcpTool(question, ns.getNode());
+                                // 改toolID需要和mcp-server里面的toolID保持一致对齐
                                 return result == null ? null : new ToolOutput(toolId, result);
                             } catch (Exception e) {
                                 log.error("MCP 工具调用异常, toolId: {}", toolId, e);
@@ -272,10 +310,10 @@ public class RetrievalEngine {
                                         .build());
                             }
                         },
-                        mcpBatchExecutor
+                        mcpBatchExecutor // 已经定义好了线程内部参数，在config文件中
                 ))
                 .toList();
-
+        // 所以相当于最后是1个toolID有可能有多种MCP执行结果
         return futures.stream()
                 .map(CompletableFuture::join)
                 .filter(Objects::nonNull)
@@ -299,7 +337,7 @@ public class RetrievalEngine {
      * @return
      */
     private CallToolResult executeSingleMcpTool(String question, IntentNode intentNode) {
-        String toolId = intentNode.getMcpToolId();
+        String toolId = intentNode.getMcpToolId(); // 获得MCP toolID
         /**
          * McpToolRegistry` 是一个工具注册表，维护 `toolId → McpToolExecutor` 的映射。
          * 每个 `McpToolExecutor` 封装了一个 MCP 工具的完整调用逻辑——工具定义（参数 Schema、描述）和执行方法。
@@ -309,14 +347,16 @@ public class RetrievalEngine {
             log.warn("MCP 工具不存在: {}", toolId);
             return null;
         }
-
+        // 这里是多态, 会执行DefaultMcpToolRegistry里的实现
         McpToolExecutor executor = executorOpt.get(); // 获得执行实例
-        Tool tool = executor.getToolDefinition(); // 获得工具定义
+        Tool tool = executor.getToolDefinition(); // 获得工具定义，这个在启动的时候就通过McpClientAutoConfiguration配置文件自动扫描是否有MCP工具，自动先注册进去
         // 调用LLM
         String customParamPrompt = intentNode.getParamPromptTemplate();
         // 通过LLM通过工具schame和用户提问来提取tool id得到params，里面也是内置系统prompt
+        // 通过extractParameters提取各种参数，包括tool的定义、参数，customParamPrompt是前端人为定义的参数
         Map<String, Object> params = mcpParameterExtractor.extractParameters(question, tool, customParamPrompt);
-
+        // 这个返回params就是大模型通过用户问题、tool参数、customParamPrompt当前mcp叶子节点的人为填写规则来提取出最后
+        // 调用MCPClient调用MCP工具，返回CallToolResult，传入params，得到MCP执行结果
         return executor.execute(params != null ? params : new HashMap<>());
     }
 

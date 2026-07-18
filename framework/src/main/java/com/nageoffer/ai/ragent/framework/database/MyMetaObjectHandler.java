@@ -29,13 +29,17 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
 
     @Override
     public void insertFill(MetaObject metaObject) {
+        // 新增记录时填充创建时间，严格填充不会覆盖实体中已显式设置的值。
         strictInsertFill(metaObject, "createTime", Date::new, Date.class);
+        // 新增时更新时间与创建时间保持同一初始化语义。
         strictInsertFill(metaObject, "updateTime", Date::new, Date.class);
+        // 默认逻辑未删除，配合查询条件实现软删除。
         strictInsertFill(metaObject, "deleted", () -> 0, Integer.class);
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
+        // 更新记录时无条件刷新更新时间，保留创建时间和删除标记。
         this.setFieldValByName("updateTime", new Date(), metaObject);
     }
 }

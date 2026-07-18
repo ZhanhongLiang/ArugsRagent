@@ -165,18 +165,73 @@ public final class FairDistributedRateLimiter {
      * 本方法不会阻塞调用线程等待 permit，因此 SSE 入口线程可以快速返回。</p>
      */
     public void acquire(AcquireRequest req) {
-        Ticket ticket = new Ticket(req);
+        Ticket ticket = new Ticket(req); // 创建ticket
+        // 把ticket注册出去到上一层调用的cancelBinder中，让外面也能触发这个cancel
         if (req.cancelBinder() != null) {
             req.cancelBinder().accept(ticket::cancel);
         }
         // entry 存活标记必须先于入队写入，否则 race 窗口内的并发 claim 会把刚入队的条目当僵尸 ZREM
+        /**
+         * setEntryMarker(ticket.requestId, req.maxWaitMillis()); 这行可以理解成：
+         * 给当前排队请求在 Redis 里放一个“我还活着”的临时标记。
+         * 它不是发放许可，也不是入队本身，而是配合 ZSET 队列防止“僵尸排队项”。
+         * 核心流程是：
+         * setEntryMarker(ticket.requestId, req.maxWaitMillis());
+         * queue.add(nextQueueSeq(), ticket.requestId);
+         * 意思是：
+         * 先写 Redis Key：name:entry:{requestId}，值是 "1"，并设置 TTL。
+         * 再把 requestId 放进 Redis ZSET 队列。
+         * 后面 Lua 抢队头时，会检查这个 entry 标记是否存在。
+         * 如果 ZSET 里有 requestId，但 entry 标记没了，
+         *   就认为这个请求已经超时、取消、或者服务崩溃遗留了，把它从队列里 ZREM 掉。
+         * 可以把 Redis 里的结构理解成两份：
+         * ZSET queue:
+         *   requestId -> 排队顺序
+         *
+         * entry marker:
+         *   name:entry:requestId -> 是否还活着，带 TTL
+         * 为什么需要它？
+         * 因为只用 ZSET 会有问题。假设用户请求入队后：
+         * 用户断开连接 / 请求超时 / JVM 崩溃
+         * 如果没有清理，requestId 可能永远留在 ZSET 队头，后面的请求就会被它挡住，公平队列就卡死了。
+         * 所以 entry marker 的作用就是：
+         * ZSET 负责排队顺序
+         * entry marker 负责判断这个排队请求是否还有效
+         * 源码里的 Lua 就是这么判断的：
+         * if redis.call('EXISTS', entryPrefix .. member) == 1 then
+         *     -- 还活着，参与公平排队
+         * else
+         *     -- 标记没了，说明是僵尸项，从 ZSET 删除
+         *     redis.call('ZREM', queueKey, member)
+         * end
+         * 为什么这行必须在 queue.add() 前面？
+         * 因为如果先入队，再写 marker，中间有一个很短的并发窗口：
+         * 线程 A：queue.add(requestId)
+         * 线程 B：Lua 扫描队列，发现 requestId 没有 entry marker
+         * 线程 B：把 requestId 当僵尸 ZREM 掉
+         * 线程 A：setEntryMarker
+         * 这样刚入队的正常请求就被误删了。
+         * 所以正确顺序是：
+         * 先写存活标记
+         * 再进入队列
+         * 一句话总结：
+         * setEntryMarker(ticket.requestId, req.maxWaitMillis())
+         * 是给排队请求写一个带过期时间的 Redis 存活标记，
+         * 用来让 Lua 脚本区分“正常等待请求”和“超时/取消/宕机遗留的僵尸队列项”，保证公平队列不会被无效请求卡住。
+         *
+         *
+         */
+        // 先
         setEntryMarker(ticket.requestId, req.maxWaitMillis());
+        // 这个就是ZSET有序集合
         RScoredSortedSet<String> queue = redissonClient.getScoredSortedSet(queueKey, StringCodec.INSTANCE);
-        // 入队
+        // 入队, 生成nextQueueSeqkey
         queue.add(nextQueueSeq(), ticket.requestId);
+        //
         if (tryAcquireIfReady(ticket)) {
             return;
         }
+        // 抢占失败，也就是某个实例节点上述过程抢占失败的时候，进入定时
         scheduleQueuePoll(ticket);
     }
 
@@ -265,6 +320,7 @@ public final class FairDistributedRateLimiter {
                 }
             };
             try {
+                // 这才是执行过程,在线程中执行
                 req.onAcquiredExecutor().execute(wrapped);
                 return true;
             } catch (RejectedExecutionException ex) {
@@ -344,13 +400,38 @@ public final class FairDistributedRateLimiter {
      *
      * <p>claim 成功不等于拿到许可，因为多个节点可能基于稍早的 availablePermits 同时进入 Lua。
      * 最终是否能跑业务，以 RPermitExpirableSemaphore.tryAcquire 返回 permitId 为准。</p>
+     *
+     *
+     * 非原子情况下，`ZRANK` 和 `ZREM` 两步之间有时间窗口。在这个窗口内，队列可能因为其他请求被取消而发生排名变化，
+     * 导致后来的请求在排名前移后抢先 claim 成功，而先来的请求因为 GC 停顿或网络延迟错过了许可。最终 FIFO 顺序被破坏——后到的反而先跑了。
+     *
+     * Lua 脚本在 Redis 单线程执行环境下保证原子性：从遍历 `ZRANGE` 到 `ZREM` 是一个不可分的事务单元。同一时刻只有一个 Lua 在跑，
+     * 其他节点的 Lua 必须排队等。这样就不可能出现「两个请求同时看到自己 liveRank=0」的情况——一个先跑完 `ZREM` 之后，
+     * 另一个再跑遍历时看到的队列已经不包含前一个了，但许可数是动态的，最终能 acquire 成功的还是受信号量限制。
+     *
+     * 新版 Lua 脚本比旧版多了僵尸清理，原子性更加重要——如果 `EXISTS` 检查和 `ZREM` 清理不在同一个原子操作里，
+     * 两个节点可能同时看到同一个僵尸条目，一个清理后另一个误以为没清理过，导致队列状态不一致。
+     *
+     * 回到在线教育公司：10 个请求几乎同时打到两台机器，每台机器跑各自的 `tryAcquireIfReady`。
+     * Redis 单线程串行执行 Lua 脚本，第 1 个 Lua 用 `ZRANGE` 取出队头窗口，遍历时看到 R1 的 entry 标记存在（liveRank=0），
+     * 满足 `liveRank < maxRank(3)`，`ZREM R1` + `DEL entry:R1` 后队列变成 `[R2, R3, ..., R10]` 共 9 个；
+     * 第 2 个 Lua 是 R2，同样扫描队头发现自己 liveRank=0，`ZREM R2`；
+     * 第 3 个 Lua 是 R3，liveRank=0，`ZREM R3`。**前 3 个都成功 claim**。
+     *
+     * 第 4 个 Lua 跑过来——扫描队头窗口看到 R4 的 liveRank=0（R1/R2/R3 都不在队列里了），
+     * 看起来还能 claim。但传入的 `maxRank` 已经是阶段 2 查到的当时的可用许可数。
+     * 如果阶段 2 查时许可还是 3 但阶段 3 跑 Lua 时其实只剩 0（被 R1/R2/R3 拿走了），
+     * R4 的 Lua claim 会成功但阶段 4 `tryAcquire` 会失败——这就是 claim 成功但 acquire 失败的兜底场景。
      */
     private boolean tryAcquireIfReady(Ticket ticket) {
         // 阶段 1：本地状态门闩。已取消/超时/已授权的请求不再参与抢占。
         if (!ticket.isPending()) {
             return false;
         }
+        // 这里是普通的信号量查询
         // 阶段 2：看当前 Redis semaphore 是否有空坑位；没有则直接进入等待路径。
+        // 阶段2查询的是许可，其实也就是信号量，也就是这个可以保证同时超过许可的实例进入的时候
+        // 能保证
         int avail = availablePermits();
         if (avail <= 0) {
             return false;
@@ -360,16 +441,18 @@ public final class FairDistributedRateLimiter {
         if (claimedScore < 0L) {
             return false;
         }
-        // 阶段 4：拿真实 permit。waitTime=0，不阻塞当前线程；拿不到就按原 score 重入队。
+        // 阶段 4：拿真实 permit。waitTime=0，不阻塞当前线程；拿不到就按原 score 重入队
+        // tryAcquirePermit里面保证了独占锁，也就是我可以保证前面lua原子claim成功，但是实际能进入线程只有许可那么多
         String permitId = tryAcquirePermit();
         if (permitId == null) {
-            // 队头但无 permit：按原 score 重入队，保留排队位次（公平性）
+            // 队头但无 permit：按原 score 重入队，保留排队位次（公平性），这个确保try失败的重新进入ZSET队列,按照之前自己的分数
             // 与 cancel/timeout 的 race：claimIfReady 已 ZREM，cleanup 的 remove 在此刻是 no-op；
             // 必须 add 后回查 state，若已终态则自行回滚，避免僵尸条目永久占据队头窗口
             setEntryMarker(ticket.requestId, Math.max(1, ticket.deadline - System.currentTimeMillis()));
             RScoredSortedSet<String> queue = redissonClient.getScoredSortedSet(queueKey, StringCodec.INSTANCE);
-            queue.add(claimedScore, ticket.requestId);
-            publishQueueNotify();
+            queue.add(claimedScore, ticket.requestId); // 进队列
+            publishQueueNotify(); // Redisson PUB广播
+            // 状态机里面的状态只有三种，ticket三种状态都是原子操作，不存在互转，只有三种pending->cancle , peding -> timeout, pdeing -> grant
             if (!ticket.isPending()) {
                 queue.remove(ticket.requestId);
                 deleteEntryMarker(ticket.requestId);
@@ -382,7 +465,7 @@ public final class FairDistributedRateLimiter {
             publishQueueNotify();
             return false;
         }
-        publishQueueNotify();
+        publishQueueNotify(); // Redisson PUB广播
         return ticket.grant(permitId);
     }
 
@@ -390,7 +473,8 @@ public final class FairDistributedRateLimiter {
      * 等待路径入口。
      *
      * <p>同步抢占失败后，Ticket 会同时拥有两条唤醒路径：scheduler 周期轮询兜底，
-     * PollNotifier 在 Redis Pub/Sub 通知到达时即时触发。两条路径调用同一个 poller，靠 Ticket 状态机保证幂等。</p>
+     * PollNotifier 在 Redis Pub/Sub 通知到达时即时触发。
+     * 两条路径调用同一个 poller，靠 Ticket 状态机保证幂等。</p>
      */
     private void scheduleQueuePoll(Ticket ticket) {
         // 配置下限 50ms：太低会让等待者频繁打 Redis，正常释放场景主要依赖 Pub/Sub 即时唤醒。
@@ -405,9 +489,11 @@ public final class FairDistributedRateLimiter {
                 ticket.timeout();
                 return;
             }
+            // 再尝试抢占
             tryAcquireIfReady(ticket);
         };
         // 首次延迟一个 interval，因为 acquire() 刚刚已经同步尝试过一次，立刻再试只会浪费 Redis 往返。
+        // 这个就是定时任务轮询！！为什么还需要定时任务轮询兜底, 只有PUB/SUB机制不够吗
         ticket.future = scheduler.scheduleAtFixedRate(poller, interval, interval, TimeUnit.MILLISECONDS);
         // 注册到 PollNotifier，后续任意节点释放许可时，Pub/Sub 会触发本地 poller 立即再试。
         pollNotifier.register(ticket.requestId, poller);
@@ -422,8 +508,10 @@ public final class FairDistributedRateLimiter {
      * Redis 会在租约到期后自动回收该 permit，避免集群并发坑位永久泄漏。</p>
      */
     private String tryAcquirePermit() {
+        // 得到信号量，semaphoreKey，根据name+semaphore查找到key
         RPermitExpirableSemaphore sem = redissonClient.getPermitExpirableSemaphore(semaphoreKey);
         try {
+            // 调用信号量的tryAcquire， 尝试抢断独占锁
             return sem.tryAcquire(0, leaseSecondsSupplier.getAsInt(), TimeUnit.SECONDS);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -437,6 +525,7 @@ public final class FairDistributedRateLimiter {
 
     private void releasePermitQuietly(String permitId) {
         try {
+            // 释放锁
             redissonClient.getPermitExpirableSemaphore(semaphoreKey).release(permitId);
         } catch (Exception ex) {
             log.debug("[{}] 释放 permit 失败（可能已过期）：{}", name, ex.getMessage());
@@ -450,6 +539,7 @@ public final class FairDistributedRateLimiter {
     private void setEntryMarker(String requestId, long remainingMillis) {
         long ttlMillis = Math.max(remainingMillis, 1L) + ENTRY_TTL_BUFFER_MILLIS;
         try {
+            // bucket redis ZSET有序集合
             RBucket<String> bucket = redissonClient.getBucket(entryKeyPrefix + requestId, StringCodec.INSTANCE);
             bucket.set("1", Duration.ofMillis(ttlMillis));
         } catch (Exception ex) {
@@ -477,7 +567,7 @@ public final class FairDistributedRateLimiter {
         RScript script = redissonClient.getScript(StringCodec.INSTANCE);
         List<Object> result = script.eval(
                 RScript.Mode.READ_WRITE,
-                claimLua,
+                claimLua, // 这个LUA脚本已经写好的
                 RScript.ReturnType.LIST,
                 List.of(queueKey),
                 requestId,
@@ -596,6 +686,7 @@ public final class FairDistributedRateLimiter {
 
         void fire() {
             // 连续广播会被合并：如果已经有扫描在跑，只累加 pendingNotifications，不再提交新的全量扫描。
+            // 第一道防线：CAS原子性
             pendingNotifications.incrementAndGet();
             if (!firing.compareAndSet(false, true)) {
                 return;

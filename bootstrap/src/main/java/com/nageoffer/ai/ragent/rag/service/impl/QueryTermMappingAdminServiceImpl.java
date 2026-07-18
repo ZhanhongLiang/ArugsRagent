@@ -34,6 +34,12 @@ import com.nageoffer.ai.ragent.rag.service.QueryTermMappingAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * 查询术语归一化规则的管理服务。
+ *
+ * <p>规则用于将用户口语、别名或型号写法转换成知识库更容易命中的标准术语；
+ * 任一变更后清空缓存，避免问题重写继续使用旧词典。</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class QueryTermMappingAdminServiceImpl implements QueryTermMappingAdminService {
@@ -43,6 +49,7 @@ public class QueryTermMappingAdminServiceImpl implements QueryTermMappingAdminSe
 
     @Override
     public String create(QueryTermMappingCreateRequest requestParam) {
+        // 词条在写入前去空白，防止视觉相同但包含前后空格的重复规则。
         Assert.notNull(requestParam, () -> new ClientException("请求不能为空"));
         String sourceTerm = StrUtil.trimToNull(requestParam.getSourceTerm());
         String targetTerm = StrUtil.trimToNull(requestParam.getTargetTerm());
@@ -58,6 +65,7 @@ public class QueryTermMappingAdminServiceImpl implements QueryTermMappingAdminSe
         record.setRemark(StrUtil.trimToNull(requestParam.getRemark()));
 
         queryTermMappingMapper.insert(record);
+        // 运行时映射通常从缓存读取，写库后必须主动失效。
         queryTermMappingCacheManager.clearCache();
         return String.valueOf(record.getId());
     }
@@ -90,6 +98,7 @@ public class QueryTermMappingAdminServiceImpl implements QueryTermMappingAdminSe
             record.setRemark(StrUtil.trimToNull(requestParam.getRemark()));
         }
 
+        // 修改任何匹配条件、优先级或启用状态都会影响重写结果。
         queryTermMappingMapper.updateById(record);
         queryTermMappingCacheManager.clearCache();
     }
@@ -97,7 +106,7 @@ public class QueryTermMappingAdminServiceImpl implements QueryTermMappingAdminSe
     @Override
     public void delete(String id) {
         QueryTermMappingDO record = loadById(id);
-        queryTermMappingMapper.deleteById(record.getId());
+        // 删除同样要清缓存，否则已删除别名仍可能命中。
         queryTermMappingCacheManager.clearCache();
     }
 
@@ -118,6 +127,7 @@ public class QueryTermMappingAdminServiceImpl implements QueryTermMappingAdminSe
                                 .like(QueryTermMappingDO::getSourceTerm, keyword)
                                 .or()
                                 .like(QueryTermMappingDO::getTargetTerm, keyword))
+                        // 数值越小优先级越高；相同优先级再按最新修改时间展示。
                         .orderByAsc(QueryTermMappingDO::getPriority)
                         .orderByDesc(QueryTermMappingDO::getUpdateTime)
         );
@@ -125,6 +135,7 @@ public class QueryTermMappingAdminServiceImpl implements QueryTermMappingAdminSe
     }
 
     private QueryTermMappingDO loadById(String id) {
+        // 所有单条操作复用统一的不存在校验。
         QueryTermMappingDO record = queryTermMappingMapper.selectById(id);
         Assert.notNull(record, () -> new ClientException("映射规则不存在"));
         return record;

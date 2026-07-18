@@ -55,6 +55,7 @@ public class StreamTaskManager {
     private static final Duration CANCEL_TTL = Duration.ofMinutes(30);
 
     // 取消状态保留 30 分钟：取消后不立刻清理，是为了让延迟到达的 token 回调还能读到 cancelled=true。
+    // 本地Cache保留状态
     private final Cache<String, StreamTaskInfo> tasks = CacheBuilder.newBuilder()
             .expireAfterWrite(CANCEL_TTL)
             .maximumSize(10000)  // 限制最大数量，基本上不可能超出这个数量。如果觉得不稳妥，可以把值调大并在配置文件声明
@@ -68,7 +69,7 @@ public class StreamTaskManager {
     }
 
     /**
-     * 订阅 Redis 取消广播。
+//     * 订阅 Redis 取消广播。
      *
      * <p>任意节点收到停止请求后都会 publish taskId；所有节点收到广播后都尝试 cancelLocal。
      * 真正持有该 taskId 的节点会中断本地 LLM 流，其它节点查不到任务则直接忽略。</p>
@@ -111,7 +112,49 @@ public class StreamTaskManager {
 
     /**
      * 绑定底层取消句柄。
+     *对，正常情况下它主要就是做映射绑定：
+     * taskInfo.handle = handle;
+     * 也就是建立：
+     * taskId -> StreamCancellationHandle
+     * 正常流程里，bindHandle() 本身不会触发取消。
+     * 只有一种特殊情况会立刻触发：
+     * if (taskInfo.cancelled.get() && handle != null) {
+     *     handle.cancel();
+     * }
+     * 这处理的是“先取消，后绑定”的竞态问题。
+     * 举个时序：
+     * 正常情况：
+     * 1. 用户发起提问
+     * 2. 后端创建 taskId
+     * 3. llmService.streamChat() 返回 handle
+     * 4. bindHandle(taskId, handle)
+     * 5. taskInfo.cancelled = false
+     * 6. 只保存 handle，不调用 cancel
+     * 7. 模型继续流式输出
+     * 也就是：
+     * taskInfo.handle = handle;
+     * // cancelled=false，不进 if
+     * 异常竞态情况：
+     * 1. 用户发起提问
+     * 2. 后端创建 taskId
+     * 3. 前端很快点了停止
+     * 4. taskManager.cancel(taskId) 先执行
+     * 5. taskInfo.cancelled = true
+     * 6. 但此时 handle 还没返回，没法真正 cancel OkHttp
+     * 7. 过一会儿 llmService.streamChat() 返回 handle
+     * 8. bindHandle(taskId, handle)
+     * 9. 发现 cancelled=true
+     * 10. 立刻 handle.cancel()
+     * 这个判断就是为了防止：
+     * 用户已经点停止了，但因为 handle 来得晚，模型流还继续跑
+     * 所以你可以这样理解：
+     * bindHandle 正常作用：
+     * 保存 taskId 和 handle 的映射。
      *
+     * bindHandle 特殊作用：
+     * 如果发现这个任务在绑定前已经被取消，就立刻补打一发 handle.cancel()。
+     * 一句话：
+     * 是的，bindHandle() 正常只是绑定映射；只有当 taskInfo.cancelled=true，说明用户已经提前取消过，它才会立即触发 handle.cancel()，用来兜住“先取消后拿到句柄”的竞态。
      * <p>句柄只有 llmService.streamChat() 返回后才拿得到。若用户在返回前已经点了停止，
      * 本地 cancelled 会先被置 true；绑定时发现已取消就立即调用 handle.cancel()，覆盖“先取消后绑定”的竞态。</p>
      */
@@ -143,7 +186,7 @@ public class StreamTaskManager {
     public void cancel(String taskId) {
         // 先设置 Redis 标记，再发布消息
         RBucket<Boolean> bucket = redissonClient.getBucket(cancelKey(taskId));
-        bucket.set(Boolean.TRUE, CANCEL_TTL);
+        bucket.set(Boolean.TRUE, CANCEL_TTL); // 先写标记，再发布消息
 
         // 发布消息通知所有节点（包括本地）
         // 本地节点也通过监听器统一处理，避免重复调用 cancelLocal
@@ -173,6 +216,7 @@ public class StreamTaskManager {
      *
      * <p>只有真正持有 taskId 的节点会找到 StreamTaskInfo。CAS 保证多次停止、广播重复到达、
      * emitter 超时等并发路径只会执行一次真实取消。</p>
+     * 这个是本地取消, 他就是在执行的机器上真正做取消流程的
      */
     private void cancelLocal(String taskId) {
         StreamTaskInfo taskInfo = tasks.getIfPresent(taskId);

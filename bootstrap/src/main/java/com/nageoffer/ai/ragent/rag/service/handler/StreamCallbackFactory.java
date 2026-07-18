@@ -28,6 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 /**
  * StreamCallback 工厂
  * 负责创建各种类型的 StreamCallback 实例
+ * 工厂类
  */
 @Component
 @RequiredArgsConstructor

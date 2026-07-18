@@ -29,8 +29,10 @@ import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.stereotype.Component;
 
 /**
- * 文档分块任务 MQ 消费者
- * 负责异步执行耗时的文本提取、分块、向量嵌入及写库操作
+ * 文档分块事务消息的消费者。
+ *
+ * <p>HTTP 请求只完成状态 CAS 和事务消息提交；真正耗时的提取、切片、Embedding 与写库在此消费者线程执行，
+ * 避免占住 Web 线程并允许 MQ 按至少一次语义重试。</p>
  */
 @Slf4j
 @Component
@@ -41,14 +43,21 @@ import org.springframework.stereotype.Component;
 )
 public class KnowledgeDocumentChunkConsumer implements RocketMQListener<MessageWrapper<KnowledgeDocumentChunkEvent>> {
 
+    /** 执行文档重建的业务服务。 */
     private final KnowledgeDocumentService documentService;
 
     @Override
+    /**
+     * 消费一条已提交的分块事件。
+     * MQ 线程没有 Web 请求上下文，因此先从事件恢复操作人到 UserContext，供审计字段和日志使用，最后必须清理避免线程复用污染。
+     */
     public void onMessage(MessageWrapper<KnowledgeDocumentChunkEvent> message) {
+        // MQ 是分块的异步边界：HTTP 线程仅切状态并发事件，消费者承担重任务。
         KnowledgeDocumentChunkEvent event = message.getBody();
 
         log.info("[消费者] 开始消费文档分块任务，docId={}, keys={}", event.getDocId(), message.getKeys());
 
+        // MQ 消费运行在独立线程，没有 Web UserContext，必须从事件载荷重建操作人。
         UserContext.set(LoginUser.builder().username(event.getOperator()).build());
         try {
             documentService.executeChunk(event.getDocId());

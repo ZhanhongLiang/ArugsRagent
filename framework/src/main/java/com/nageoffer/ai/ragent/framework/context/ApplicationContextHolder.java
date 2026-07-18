@@ -35,10 +35,18 @@ import java.util.Map;
 @Component
 public class ApplicationContextHolder implements ApplicationContextAware {
 
+    /** Spring 启动完成后保存的全局容器引用，供非 Bean 场景按需获取依赖。 */
     private static ApplicationContext CONTEXT;
 
+    /**
+     * Spring 回调入口：容器创建本 Bean 时注入 ApplicationContext。
+     *
+     * @param applicationContext 当前应用上下文
+     * @throws BeansException 容器初始化异常时由 Spring 向上抛出
+     */
     @Override
     public void setApplicationContext(@NonNull ApplicationContext applicationContext) throws BeansException {
+        // 保存静态引用；后续静态工具方法都通过该引用委托给 Spring。
         ApplicationContextHolder.CONTEXT = applicationContext;
     }
 
@@ -46,6 +54,7 @@ public class ApplicationContextHolder implements ApplicationContextAware {
      * 根据类型获取 Bean
      */
     public static <T> T getBean(Class<T> clazz) {
+        // 按类型获取唯一 Bean；存在多个同类型 Bean 时由 Spring 抛出歧义异常。
         return CONTEXT.getBean(clazz);
     }
 
@@ -53,6 +62,7 @@ public class ApplicationContextHolder implements ApplicationContextAware {
      * 根据名称获取 Bean
      */
     public static Object getBean(String name) {
+        // 按 Bean 名称获取，适用于运行时动态选择实现的场景。
         return CONTEXT.getBean(name);
     }
 
@@ -60,6 +70,7 @@ public class ApplicationContextHolder implements ApplicationContextAware {
      * 根据名称和类型获取 Bean
      */
     public static <T> T getBean(String name, Class<T> clazz) {
+        // 同时校验名称与类型，避免错误强转在更远处才暴露。
         return CONTEXT.getBean(name, clazz);
     }
 
@@ -67,6 +78,7 @@ public class ApplicationContextHolder implements ApplicationContextAware {
      * 根据类型获取同类型的所有 Bean
      */
     public static <T> Map<String, T> getBeansOfType(Class<T> clazz) {
+        // 返回所有同类型实现，常用于策略、工具执行器和供应商客户端自动发现。
         return CONTEXT.getBeansOfType(clazz);
     }
 
@@ -74,6 +86,7 @@ public class ApplicationContextHolder implements ApplicationContextAware {
      * 查找 Bean 上的注解
      */
     public static <A extends Annotation> A findAnnotationOnBean(String beanName, Class<A> annotationType) {
+        // 让调用方查询代理目标上的注解，无需自行处理 AOP 代理。
         return CONTEXT.findAnnotationOnBean(beanName, annotationType);
     }
 
@@ -81,6 +94,7 @@ public class ApplicationContextHolder implements ApplicationContextAware {
      * 获取 ApplicationContext
      */
     public static ApplicationContext getInstance() {
+        // 暴露容器本身仅用于框架级扩展；普通业务优先构造器注入。
         return CONTEXT;
     }
 }

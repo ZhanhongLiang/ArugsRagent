@@ -22,12 +22,14 @@ import com.nageoffer.ai.ragent.core.chunk.VectorChunk;
 import java.util.List;
 
 /**
- * 向量存储服务接口
+ * 文档分块向量的写入、更新和删除抽象。
+ *
+ * <p>摄取流水线只依赖本接口，不感知底层是 pgvector 还是 Milvus；这样切换向量引擎不需要改动分块、嵌入和任务编排代码。</p>
  */
 public interface VectorStoreService {
 
     /**
-     * 批量建立文档的向量索引
+     * 批量建立文档的向量索引。调用前必须已完成嵌入计算，否则底层无法执行相似度检索。
      *
      * @param collectionName 向量空间名称（知识库 collectionName）
      * @param docId          文档唯一标识
@@ -36,7 +38,7 @@ public interface VectorStoreService {
     void indexDocumentChunks(String collectionName, String docId, List<VectorChunk> chunks);
 
     /**
-     * 更新单个 chunk 的向量索引
+     * 更新单个 chunk 的向量索引，通常用于编辑正文、重新分块或重算嵌入后。
      *
      * @param collectionName 向量空间名称（知识库 collectionName）
      * @param docId          文档唯一标识
@@ -45,7 +47,7 @@ public interface VectorStoreService {
     void updateChunk(String collectionName, String docId, VectorChunk chunk);
 
     /**
-     * 删除文档的所有向量索引
+     * 删除文档的所有向量索引，使重建或删除文档后旧内容不再参与召回。
      *
      * @param collectionName 向量空间名称（知识库 collectionName）
      * @param docId          文档唯一标识

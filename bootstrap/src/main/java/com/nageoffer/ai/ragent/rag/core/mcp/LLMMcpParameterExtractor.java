@@ -93,6 +93,8 @@ public class LLMMcpParameterExtractor implements McpParameterExtractor {
 
         messages.add(ChatMessage.system(systemPrompt));
         String userPrompt = promptTemplateLoader.render(MCP_PARAMETER_EXTRACT_USER_PROMPT_PATH, Map.of(
+                // LLM 不认识 MCP SDK 的 `JsonSchema` 对象，
+                // 需要把它转成人类可读的文本。`buildToolDefinition()` 做的就是这件事：
                 "tool_definition", buildToolDefinition(tool),
                 "user_question", userQuestion
         ));
@@ -205,6 +207,7 @@ public class LLMMcpParameterExtractor implements McpParameterExtractor {
         for (String paramName : paramNames) {
             if (obj.has(paramName) && !obj.get(paramName).isJsonNull()) {
                 JsonElement value = obj.get(paramName);
+                //
                 result.put(paramName, convertJsonElement(value));
             }
         }

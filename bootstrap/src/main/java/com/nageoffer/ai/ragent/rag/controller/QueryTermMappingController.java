@@ -35,7 +35,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 关键词映射管理控制器
+ * 查询术语归一化规则的管理端接口。
+ * 规则变更由服务层同步处理缓存失效，确保问题重写读取到最新映射。
  */
 @RestController
 @RequiredArgsConstructor
@@ -48,6 +49,7 @@ public class QueryTermMappingController {
      */
     @GetMapping("/mappings")
     public Result<IPage<QueryTermMappingVO>> pageQuery(QueryTermMappingPageRequest requestParam) {
+        // 分页和筛选参数由 MyBatis-Plus Page 请求对象承载。
         return Results.success(queryTermMappingAdminService.pageQuery(requestParam));
     }
 
@@ -64,6 +66,7 @@ public class QueryTermMappingController {
      */
     @PostMapping("/mappings")
     public Result<String> create(@RequestBody QueryTermMappingCreateRequest requestParam) {
+        // 创建后返回规则主键，方便前端继续编辑或定位。
         return Results.success(queryTermMappingAdminService.create(requestParam));
     }
 

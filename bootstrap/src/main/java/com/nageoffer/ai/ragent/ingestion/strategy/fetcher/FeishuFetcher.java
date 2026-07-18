@@ -39,37 +39,46 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 飞书文档抓取器
- * 负责从飞书平台获取文档内容，支持 docx 类型的在线文档和二进制文件
+ * 飞书文档和附件的抓取策略。
+ *
+ * <p>docx 链接需要先转换为飞书 raw_content API，再从 JSON 中取正文；普通附件链接则直接下载字节。
+ * 凭证可传入现成 tenantAccessToken，也可传 app_id/app_secret 在运行时换取 token。</p>
  */
 @Component
 @RequiredArgsConstructor
 public class FeishuFetcher implements DocumentFetcher {
 
+    /** 飞书自建应用换取 tenant_access_token 的固定端点。 */
     private static final String TOKEN_URL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal/";
 
+    /** 换取令牌时使用的同步 OkHttp 客户端。 */
     @Qualifier("syncHttpClient")
     private final OkHttpClient okHttpClient;
+    /** 下载文档正文或附件时复用的 HTTP 下载辅助组件。 */
     private final HttpClientHelper httpClientHelper;
 
     @Override
+    /** @return 飞书来源类型。 */
     public SourceType supportedType() {
         return SourceType.FEISHU;
     }
 
     @Override
+    /** 根据链接类别读取 docx 原始正文或普通二进制附件。 */
     public FetchResult fetch(DocumentSource source) {
         String location = source.getLocation();
         if (!StringUtils.hasText(location)) {
             throw new ServiceException("飞书文档地址不能为空");
         }
 
+        // 优先复用调用方提供的短期 token，必要时才用应用凭证换取新 token。
         String accessToken = resolveAccessToken(source.getCredentials());
         Map<String, String> headers = new HashMap<>();
         if (StringUtils.hasText(accessToken)) {
             headers.put("Authorization", "Bearer " + accessToken);
         }
 
+        // docx 分享链接不是文件下载地址，必须调用飞书 raw_content 接口获取正文。
         if (isDocxUrl(location)) {
             String docToken = extractDocToken(location);
             String apiUrl = "https://open.feishu.cn/open-apis/docx/v1/documents/" + docToken + "/raw_content";
@@ -91,10 +100,12 @@ public class FeishuFetcher implements DocumentFetcher {
         return new FetchResult(resp.body(), contentType, fileName);
     }
 
+    /** 通过 URL 路径判断是否为飞书在线文档链接。 */
     private boolean isDocxUrl(String location) {
         return location.contains("/docx/") || location.contains("/docs/");
     }
 
+    /** 从 /docx/{token} 或 /docs/{token} 链接提取飞书文档 token，并移除 query 参数。 */
     private String extractDocToken(String location) {
         String[] parts = location.split("/");
         for (int i = 0; i < parts.length; i++) {
@@ -109,6 +120,10 @@ public class FeishuFetcher implements DocumentFetcher {
         throw new ServiceException("无法从飞书链接解析文档令牌: " + location);
     }
 
+    /**
+     * 按“tenantAccessToken -> accessToken -> app_id/app_secret 换取”的优先级解析访问令牌。
+     * 允许公开文档没有 token 继续下载，由飞书端决定是否拒绝。
+     */
     private String resolveAccessToken(Map<String, String> credentials) {
         if (credentials == null) {
             return null;
@@ -128,6 +143,7 @@ public class FeishuFetcher implements DocumentFetcher {
         return requestTenantAccessToken(appId, appSecret);
     }
 
+    /** 使用飞书应用凭证请求 tenant_access_token，并将网络或协议失败转换为服务异常。 */
     private String requestTenantAccessToken(String appId, String appSecret) {
         try {
             JsonObject payload = new JsonObject();
@@ -154,6 +170,7 @@ public class FeishuFetcher implements DocumentFetcher {
         }
     }
 
+    /** 从 raw_content API 的 JSON 结构中安全提取 data.content，非预期响应返回 null 触发文本回退。 */
     private String extractDocxContent(byte[] bytes) {
         try {
             JsonObject root = JsonParser.parseString(new String(bytes, StandardCharsets.UTF_8)).getAsJsonObject();

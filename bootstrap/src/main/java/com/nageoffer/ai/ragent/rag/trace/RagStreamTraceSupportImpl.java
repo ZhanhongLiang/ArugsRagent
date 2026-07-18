@@ -32,8 +32,10 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 跨线程 stream trace 实现：解决 @RagTraceNode AOP 在 stream 场景
- * 只测到 runAsync 提交的问题
+ * 流式模型调用的 Trace 节点支持。
+ *
+ * <p>AOP 只能观察提交异步任务的方法，无法覆盖后台线程持续读取 SSE 的真实耗时；
+ * 本组件显式创建 Span，并在流完成、异常或取消时由回调结束节点。</p>
  */
 @Slf4j
 @Component
@@ -63,6 +65,7 @@ public class RagStreamTraceSupportImpl implements RagStreamTraceSupport {
         int depth = RagTraceContext.depth();
         long startMillis = System.currentTimeMillis();
 
+        // 在异步读取真正开始前插入 RUNNING，保证首包、取消等子事件都有稳定父节点。
         traceRecordService.startNode(RagTraceNodeDO.builder()
                 .traceId(traceId)
                 .nodeId(nodeId)
@@ -74,7 +77,7 @@ public class RagStreamTraceSupportImpl implements RagStreamTraceSupport {
                 .startTime(new Date())
                 .build());
 
-        // 调用线程上 push，使后续同步子节点（如 first-packet）能识别父节点
+        // 调用线程暂时入栈，使紧随其后的首包探测等同步子节点正确关联；detach 后不污染外层。
         RagTraceContext.pushNode(nodeId);
 
         return new StreamSpanImpl(traceId, nodeId, startMillis);
@@ -98,7 +101,7 @@ public class RagStreamTraceSupportImpl implements RagStreamTraceSupport {
             if (!detached.compareAndSet(false, true)) {
                 return;
             }
-            // 仅当栈顶为本节点才 pop，防止与并发节点错乱
+            // 仅当栈顶为本节点才 pop，防止嵌套或并发场景误弹其他节点。
             if (nodeId.equals(RagTraceContext.currentNodeId())) {
                 RagTraceContext.popNode();
             }
@@ -110,6 +113,7 @@ public class RagStreamTraceSupportImpl implements RagStreamTraceSupport {
                 return;
             }
             try {
+                // AtomicBoolean 保证 SSE 完成回调重复触发时只更新一次。
                 traceRecordService.finishNode(traceId, nodeId, STATUS_SUCCESS, null,
                         new Date(), System.currentTimeMillis() - startMillis);
             } catch (Exception e) {
@@ -123,6 +127,7 @@ public class RagStreamTraceSupportImpl implements RagStreamTraceSupport {
                 return;
             }
             try {
+                // 错误流同样需要收尾，否则管理端无法区分失败和仍在运行。
                 traceRecordService.finishNode(traceId, nodeId, STATUS_ERROR,
                         truncateError(error), new Date(), System.currentTimeMillis() - startMillis);
             } catch (Exception e) {
@@ -136,6 +141,7 @@ public class RagStreamTraceSupportImpl implements RagStreamTraceSupport {
                 return;
             }
             try {
+                // 用户主动停止是正常终止状态，不应伪装为模型调用错误。
                 traceRecordService.finishNode(traceId, nodeId, STATUS_CANCELLED, null,
                         new Date(), System.currentTimeMillis() - startMillis);
             } catch (Exception e) {

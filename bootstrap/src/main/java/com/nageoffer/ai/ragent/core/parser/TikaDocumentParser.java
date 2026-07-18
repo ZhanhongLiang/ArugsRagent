@@ -37,6 +37,12 @@ import java.util.Map;
 @Component
 public class TikaDocumentParser implements DocumentParser {
 
+    /*
+     * General document parser:
+     * Tika is the broad fallback parser for PDF/Office/HTML/XML and other binary
+     * formats. Its output is normalized before chunking so downstream chunk
+     * strategies operate on plain text instead of format-specific structures.
+     */
     private static final Tika TIKA = new Tika();
 
     static {
@@ -52,6 +58,12 @@ public class TikaDocumentParser implements DocumentParser {
 
     @Override
     public ParseResult parse(byte[] content, String mimeType, Map<String, Object> options) {
+        /*
+         * Memory note:
+         * This parser receives bytes after upload/storage boundaries. The upload
+         * layer is responsible for size limits; this layer focuses on extraction and
+         * cleanup, not multipart protection.
+         */
         if (content == null || content.length == 0) {
             return ParseResult.ofText("");
         }

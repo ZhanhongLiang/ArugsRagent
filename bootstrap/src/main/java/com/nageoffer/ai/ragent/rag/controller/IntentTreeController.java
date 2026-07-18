@@ -36,8 +36,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 意图树控制器
- * 提供意图节点树的查询、创建、更新和删除功能
+ * 意图树的管理端接口。
+ *
+ * <p>节点增删改后由 {@code IntentTreeService} 负责持久化并失效 Redis 树缓存，
+ * 所以本控制器不能直接操作缓存或数据库实体。</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -50,6 +52,7 @@ public class IntentTreeController {
      */
     @GetMapping("/intent-tree/trees")
     public Result<List<IntentNodeTreeVO>> tree() {
+        // 返回嵌套树供管理页渲染，而不是让前端根据 parentId 自行拼装。
         return Results.success(intentTreeService.getFullTree());
     }
 
@@ -58,6 +61,7 @@ public class IntentTreeController {
      */
     @PostMapping("/intent-tree")
     public Result<String> createNode(@RequestBody IntentNodeCreateRequest requestParam) {
+        // 服务层负责校验父节点、知识库或 MCP 工具绑定关系。
         return Results.success(intentTreeService.createNode(requestParam));
     }
 
@@ -66,6 +70,7 @@ public class IntentTreeController {
      */
     @PutMapping("/intent-tree/{id}")
     public void updateNode(@PathVariable String id, @RequestBody IntentNodeUpdateRequest requestParam) {
+        // 路径 ID 是更新目标，避免以请求体 ID 作为可信定位条件。
         intentTreeService.updateNode(id, requestParam);
     }
 
@@ -82,6 +87,7 @@ public class IntentTreeController {
      */
     @PostMapping("/intent-tree/batch/enable")
     public void batchEnable(@RequestBody IntentNodeBatchRequest requestParam) {
+        // 批量状态操作仍通过服务层统一刷新缓存。
         intentTreeService.batchEnableNodes(requestParam.getIds());
     }
 

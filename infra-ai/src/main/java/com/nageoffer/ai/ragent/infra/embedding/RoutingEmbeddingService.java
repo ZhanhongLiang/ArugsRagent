@@ -42,6 +42,14 @@ import java.util.stream.Collectors;
 @Primary
 public class RoutingEmbeddingService implements EmbeddingService {
 
+    /*
+     * Embedding routing reuses the same model selection and circuit-breaker infrastructure as Chat.
+     *
+     * Important RAG constraint: stored document vectors and query vectors must be produced by
+     * compatible embedding models. That is why the knowledge base can pin embeddingModel and call
+     * embedBatch(texts, modelId).
+     */
+
     // 根据 embedding 分组配置选择候选模型。
     private final ModelSelector selector;
     // 通用同步故障转移执行器。
@@ -65,6 +73,7 @@ public class RoutingEmbeddingService implements EmbeddingService {
      */
     @Override
     public List<Float> embed(String text) {
+        // Default model route: choose available embedding candidates and fallback if the first provider fails.
         return executor.executeWithFallback(
                 ModelCapability.EMBEDDING,
                 // 候选列表已经按默认模型、优先级和熔断状态过滤排序。
@@ -108,6 +117,7 @@ public class RoutingEmbeddingService implements EmbeddingService {
      */
     @Override
     public List<List<Float>> embedBatch(List<String> texts, String modelId) {
+        // Pinned model route: used when a knowledge base has already chosen an embedding model for its vector space.
         return executor.executeWithFallback(
                 ModelCapability.EMBEDDING,
                 List.of(resolveTarget(modelId)),

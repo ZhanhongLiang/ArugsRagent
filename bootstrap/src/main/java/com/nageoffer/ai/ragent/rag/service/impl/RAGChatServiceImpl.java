@@ -88,6 +88,17 @@ public class RAGChatServiceImpl implements RAGChatService {
         String taskId = IdUtil.getSnowflakeNextIdStr();
 
         // SSE emitter -> StreamCallback。之后 pipeline 只关心 onContent/onComplete/onError，不直接操作 emitter。
+        // 这里创建了callback实例，该实例贯穿整个LLM过程，
+        /**
+         * **创建回调实例**：`StreamCallbackFactory.createChatEventHandler()` 把 `SseEmitter`、
+         * 两个 ID、以及一堆服务依赖打包传给 `StreamChatEventHandler`。
+         * 这个 handler 就是贯穿整条链路的回调实例——从模型调度层到客户端层到推送层，用的都是同一个对象。
+         *
+         * **构建上下文**：把问题、ID、用户信息、回调实例封装成 `StreamChatContext`，交给流水线。
+         *
+         * **异常兜底**：外层 `try-catch` 包住了整个 `pipeline.execute()`。流水线的任何阶段抛异常——检索超时、
+         * 模型调用失败、Prompt 模板渲染出错——都会被这里兜住，通过 `callback.onError()` 通知前端。
+         */
         StreamCallback callback = callbackFactory.createChatEventHandler(emitter, actualConversationId, taskId);
 
         // 先进入分布式队列限流；拿到许可后才真正执行 trace + pipeline。这里传入的是可延迟执行的业务 lambda。

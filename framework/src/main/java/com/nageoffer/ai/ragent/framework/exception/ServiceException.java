@@ -24,27 +24,32 @@ import com.nageoffer.ai.ragent.framework.errorcode.IErrorCode;
 import java.util.Optional;
 
 /**
- * 服务端运行异常
- * 请求运行过程中出现的不符合业务预期的异常
+ * 服务端内部处理失败时抛出的领域异常。
+ * 它与 ClientException 区分开，便于监控和调用方判断是否值得重试。
  */
 public class ServiceException extends AbstractException {
 
+    /** 使用默认服务端错误码创建异常。 */
     public ServiceException(String message) {
         this(message, null, BaseErrorCode.SERVICE_ERROR);
     }
 
+    /** 使用错误码默认消息创建异常。 */
     public ServiceException(IErrorCode errorCode) {
         this(null, errorCode);
     }
 
+    /** 使用调用点消息覆盖指定错误码默认文案。 */
     public ServiceException(String message, IErrorCode errorCode) {
         this(message, null, errorCode);
     }
 
+    /** 将空消息规范化为错误码文案，并保留底层原因。 */
     public ServiceException(String message, Throwable throwable, IErrorCode errorCode) {
         super(Optional.ofNullable(message).orElse(errorCode.message()), throwable, errorCode);
     }
 
+    /** 输出紧凑的错误码与错误消息，便于服务端日志检索。 */
     @Override
     public String toString() {
         return "ServiceException{" +

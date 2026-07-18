@@ -28,12 +28,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 /**
- * 数据摄入任务服务接口
+ * 可配置摄取管道的任务服务端口。
+ *
+ * <p>普通来源和 multipart 上传最终复用同一执行内核；任务、节点日志与结果查询对控制器统一暴露。</p>
  */
 public interface IngestionTaskService {
 
     /**
-     * 执行数据摄入任务
+     * 根据 JSON 文档来源执行摄取。
      *
      * @param request 创建请求
      * @return 摄入结果
@@ -41,16 +43,16 @@ public interface IngestionTaskService {
     IngestionResult execute(IngestionTaskCreateRequest request);
 
     /**
-     * 上传文件并执行摄入任务
+     * 读取 multipart 文件字节并执行摄取。
      *
-     * @param pipelineId 流水线ID
-     * @param file       上传文件
+     * @param pipelineId 流水线 ID，不能为空，决定节点顺序与参数
+     * @param file 用户上传的原始文件
      * @return 摄入结果
      */
     IngestionResult upload(String pipelineId, MultipartFile file);
 
     /**
-     * 获取任务详情
+     * 获取任务主表摘要及序列化后的节点日志概览。
      *
      * @param taskId 任务ID
      * @return 任务VO
@@ -58,7 +60,7 @@ public interface IngestionTaskService {
     IngestionTaskVO get(String taskId);
 
     /**
-     * 分页查询任务
+     * 按状态可选过滤地分页查询任务历史。
      *
      * @param page   分页参数
      * @param status 状态筛选
@@ -67,7 +69,7 @@ public interface IngestionTaskService {
     IPage<IngestionTaskVO> page(Page<IngestionTaskVO> page, String status);
 
     /**
-     * 获取任务节点列表
+     * 获取单个任务按执行顺序排列的逐节点记录。
      *
      * @param taskId 任务ID
      * @return 节点列表

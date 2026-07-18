@@ -1,0 +1,149 @@
+# Copy this file to .github/workflows/ragent-ci-release.yml and adjust only commands
+# that are proved necessary by the current repository.
+name: Ragent CI and GHCR Release
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ragent-ci-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify source and deployment contract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Verify backend
+        run: ./mvnw -B -ntp -pl bootstrap -am verify
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Render image-first runtime Compose
+        run: >-
+          docker compose
+          --env-file deploy/compose/.env.example
+          -f deploy/compose/compose.runtime.yaml
+          config
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image without push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile.api
+          push: false
+          tags: ragent-api:ci
+
+      - name: Build Web image without push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile.web
+          push: false
+          tags: ragent-web:ci
+
+  publish:
+    name: Publish immutable GHCR images
+    needs: verify
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve image namespace
+        shell: bash
+        run: |
+          echo "GHCR_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+          echo "API_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/arugsragent-api" >> "$GITHUB_ENV"
+          echo "WEB_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/arugsragent-web" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and publish API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile.api
+          push: true
+          tags: ${{ env.API_IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=ragent-api
+          cache-to: type=gha,mode=max,scope=ragent-api
+
+      - name: Build and publish Web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile.web
+          push: true
+          tags: ${{ env.WEB_IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=ragent-web
+          cache-to: type=gha,mode=max,scope=ragent-web
+
+      - name: Publish release handoff summary
+        shell: bash
+        run: |
+          {
+            echo "## Immutable Ragent images"
+            echo
+            echo "- Release SHA: \`${GITHUB_SHA}\`"
+            echo "- API: \`${API_IMAGE}:${GITHUB_SHA}\`"
+            echo "- Web: \`${WEB_IMAGE}:${GITHUB_SHA}\`"
+            echo
+            echo "Initial deployment remains manual: run the Stage 2 server validator and \`/opt/ragent/bin/deploy-release.sh ${GITHUB_SHA}\`."
+          } >> "$GITHUB_STEP_SUMMARY"

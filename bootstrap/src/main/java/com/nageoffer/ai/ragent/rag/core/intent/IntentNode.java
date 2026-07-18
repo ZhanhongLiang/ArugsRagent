@@ -109,7 +109,7 @@ public class IntentNode {
     private Integer topK;
 
     /**
-     * 短规则片段（可选）
+     * 短规则片段（可选），这个是前端填好之后填充的
      */
     private String promptSnippet;
 

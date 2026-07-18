@@ -20,24 +20,22 @@ package com.nageoffer.ai.ragent.infra.http;
 import lombok.Getter;
 
 /**
- * 模型客户端异常类
- * 用于封装模型调用过程中的各类异常信息
+ * 模型客户端的结构化异常。
+ *
+ * <p>除了消息外还携带错误类别与 HTTP 状态码，让 {@code ModelRoutingExecutor} 能记录失败、触发熔断，
+ * 并判断是否继续尝试备用模型。</p>
  */
 @Getter
 public class ModelClientException extends RuntimeException {
 
-    /**
-     * 错误类型
-     */
+    /** 错误类别，例如鉴权、限流、网络或非法响应。 */
     private final ModelClientErrorType errorType;
 
-    /**
-     * HTTP状态码
-     */
+    /** 若失败来自 HTTP 层则记录状态码；网络异常等场景为 null。 */
     private final Integer statusCode;
 
     /**
-     * 构造带原因的模型客户端异常
+     * 构造带原始原因的模型客户端异常。
      *
      * @param message    异常消息
      * @param errorType  错误类型
@@ -51,7 +49,7 @@ public class ModelClientException extends RuntimeException {
     }
 
     /**
-     * 构造模型客户端异常
+     * 构造没有下层 cause 的协议或 HTTP 异常。
      *
      * @param message    异常消息
      * @param errorType  错误类型

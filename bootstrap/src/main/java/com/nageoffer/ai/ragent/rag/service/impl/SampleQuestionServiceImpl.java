@@ -35,6 +35,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 欢迎页示例问题的管理与随机展示服务。
+ * 示例问题只提供提问引导，不参与检索、记忆或意图分类的业务判断。
+ */
 @Service
 @RequiredArgsConstructor
 public class SampleQuestionServiceImpl implements SampleQuestionService {
@@ -45,6 +49,7 @@ public class SampleQuestionServiceImpl implements SampleQuestionService {
 
     @Override
     public String create(SampleQuestionCreateRequest requestParam) {
+        // question 是实际点击后发送给聊天接口的内容，不能为空。
         Assert.notNull(requestParam, () -> new ClientException("请求不能为空"));
         String question = StrUtil.trimToNull(requestParam.getQuestion());
         Assert.notBlank(question, () -> new ClientException("示例问题内容不能为空"));
@@ -60,6 +65,7 @@ public class SampleQuestionServiceImpl implements SampleQuestionService {
 
     @Override
     public void update(String id, SampleQuestionUpdateRequest requestParam) {
+        // 使用非空字段更新，允许单独调整标题、描述或提问文本。
         Assert.notNull(requestParam, () -> new ClientException("请求不能为空"));
         SampleQuestionDO record = loadById(id);
 
@@ -98,6 +104,7 @@ public class SampleQuestionServiceImpl implements SampleQuestionService {
                 page,
                 Wrappers.lambdaQuery(SampleQuestionDO.class)
                         .eq(SampleQuestionDO::getDeleted, 0)
+                        // 关键字可同时命中展示标题、辅助描述和实际问题。
                         .and(StrUtil.isNotBlank(keyword), wrapper -> wrapper
                                 .like(SampleQuestionDO::getTitle, keyword)
                                 .or()
@@ -111,6 +118,7 @@ public class SampleQuestionServiceImpl implements SampleQuestionService {
 
     @Override
     public List<SampleQuestionVO> listRandomQuestions() {
+        // 欢迎页固定展示少量随机题，避免页面被全部样例淹没。
         List<SampleQuestionDO> records = sampleQuestionMapper.selectList(
                 Wrappers.lambdaQuery(SampleQuestionDO.class)
                         .eq(SampleQuestionDO::getDeleted, 0)
@@ -125,6 +133,7 @@ public class SampleQuestionServiceImpl implements SampleQuestionService {
     }
 
     private SampleQuestionDO loadById(String id) {
+        // 单条操作统一过滤逻辑删除记录。
         SampleQuestionDO record = sampleQuestionMapper.selectOne(
                 Wrappers.lambdaQuery(SampleQuestionDO.class)
                         .eq(SampleQuestionDO::getId, id)

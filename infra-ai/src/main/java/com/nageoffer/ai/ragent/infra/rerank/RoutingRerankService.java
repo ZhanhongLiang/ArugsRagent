@@ -39,6 +39,11 @@ import java.util.stream.Collectors;
 @Primary
 public class RoutingRerankService implements RerankService {
 
+    /**
+     * Rerank 虽是检索后处理能力，但路由方式与 Chat/Embedding 一致。
+     * 真实精排模型用于改善召回 Chunk 的顺序；NOOP 候选则在供应商不可用时仅截断原始结果，保证 RAG 仍可回答。
+     */
+
     // 选择 rerank 分组候选，包含真实 Rerank 模型和 noop 兜底候选。
     private final ModelSelector selector;
     // 通用同步故障转移执行器。
@@ -69,6 +74,7 @@ public class RoutingRerankService implements RerankService {
      */
     @Override
     public List<RetrievedChunk> rerank(String query, List<RetrievedChunk> candidates, int topN) {
+        // 执行器负责供应商失败、三态熔断与 fallback；调用方只拿到当前可用的最佳排序结果。
         return executor.executeWithFallback(
                 ModelCapability.RERANK,
                 // 候选顺序由 priority 控制，真实 Rerank 通常优先，noop 放最后兜底。

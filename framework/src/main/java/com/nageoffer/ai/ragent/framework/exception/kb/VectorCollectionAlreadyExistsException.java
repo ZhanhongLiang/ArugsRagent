@@ -20,10 +20,13 @@ package com.nageoffer.ai.ragent.framework.exception.kb;
 import com.nageoffer.ai.ragent.framework.exception.ServiceException;
 
 /**
- * 向量表重复创建异常
+ * 创建已存在向量集合时抛出的服务端业务异常。
+ *
+ * <p>用专用类型保留“重复创建”的语义，调用方可选择复用已有集合而非将其视为一般系统故障。</p>
  */
 public class VectorCollectionAlreadyExistsException extends ServiceException {
 
+    /** @param collectionName 被重复创建的向量集合名称。 */
     public VectorCollectionAlreadyExistsException(String collectionName) {
         super("向量集合已存在，禁止重复创建：" + collectionName);
     }
