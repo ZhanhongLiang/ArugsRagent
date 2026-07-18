@@ -42,8 +42,16 @@ export interface ScopeAssignment<T extends DataScopeType | KnowledgeResourceScop
   teamId?: string | null;
 }
 
+function requireArrayResponse<T>(endpoint: string, payload: unknown): T[] {
+  if (!Array.isArray(payload)) {
+    throw new Error(`数据权限接口 ${endpoint} 返回了非数组数据`);
+  }
+  return payload as T[];
+}
+
 export async function getWorkshops(): Promise<Workshop[]> {
-  return api.get<Workshop[], Workshop[]>("/knowledge-access/workshops");
+  const endpoint = "/knowledge-access/workshops";
+  return requireArrayResponse<Workshop>(endpoint, await api.get<unknown, unknown>(endpoint));
 }
 
 export async function createWorkshop(payload: Pick<Workshop, "code" | "name">): Promise<Workshop> {
@@ -51,7 +59,8 @@ export async function createWorkshop(payload: Pick<Workshop, "code" | "name">): 
 }
 
 export async function getWorkshopTeams(workshopId: string): Promise<WorkshopTeam[]> {
-  return api.get<WorkshopTeam[], WorkshopTeam[]>(`/knowledge-access/workshops/${workshopId}/teams`);
+  const endpoint = `/knowledge-access/workshops/${workshopId}/teams`;
+  return requireArrayResponse<WorkshopTeam>(endpoint, await api.get<unknown, unknown>(endpoint));
 }
 
 export async function createWorkshopTeam(
@@ -62,7 +71,8 @@ export async function createWorkshopTeam(
 }
 
 export async function getUserDataScopes(userId: string): Promise<UserDataScope[]> {
-  return api.get<UserDataScope[], UserDataScope[]>(`/knowledge-access/users/${userId}/scopes`);
+  const endpoint = `/knowledge-access/users/${userId}/scopes`;
+  return requireArrayResponse<UserDataScope>(endpoint, await api.get<unknown, unknown>(endpoint));
 }
 
 export async function replaceUserDataScopes(
@@ -76,8 +86,10 @@ export async function getKnowledgeResourceScopes(
   resourceType: KnowledgeResourceType,
   resourceId: string
 ): Promise<KnowledgeResourceScope[]> {
-  return api.get<KnowledgeResourceScope[], KnowledgeResourceScope[]>(
-    `/knowledge-access/${resourceType}/${resourceId}/scopes`
+  const endpoint = `/knowledge-access/${resourceType}/${resourceId}/scopes`;
+  return requireArrayResponse<KnowledgeResourceScope>(
+    endpoint,
+    await api.get<unknown, unknown>(endpoint)
   );
 }
 

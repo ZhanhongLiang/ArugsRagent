@@ -129,7 +129,7 @@ export function DataAccessPage() {
       return workshopTeams;
     } catch (error) {
       toast.error(getErrorMessage(error, "加载班组失败"));
-      return [];
+      throw error;
     }
   }, []);
 
@@ -173,7 +173,7 @@ export function DataAccessPage() {
       setTeams([]);
       return;
     }
-    void cacheWorkshopTeams(selectedWorkshopId).then(setTeams);
+    void cacheWorkshopTeams(selectedWorkshopId).then(setTeams).catch(() => undefined);
   }, [cacheWorkshopTeams, selectedWorkshopId]);
 
   useEffect(() => {
@@ -187,7 +187,7 @@ export function DataAccessPage() {
         const teamWorkshopIds = [...new Set(scopes
           .filter((scope) => scope.scopeType === "TEAM")
           .map((scope) => scope.workshopId))];
-        void Promise.all(teamWorkshopIds.map(cacheWorkshopTeams));
+        void Promise.all(teamWorkshopIds.map(cacheWorkshopTeams)).catch(() => undefined);
       })
       .catch((error) => toast.error(getErrorMessage(error, "加载用户数据范围失败")));
   }, [cacheWorkshopTeams, selectedUserId]);
@@ -217,7 +217,7 @@ export function DataAccessPage() {
         const teamWorkshopIds = [...new Set(scopes
           .filter((scope) => scope.scopeType === "TEAM" && scope.workshopId)
           .map((scope) => scope.workshopId as string))];
-        void Promise.all(teamWorkshopIds.map(cacheWorkshopTeams));
+        void Promise.all(teamWorkshopIds.map(cacheWorkshopTeams)).catch(() => undefined);
       })
       .catch((error) => toast.error(getErrorMessage(error, "加载资源授权失败")));
   }, [cacheWorkshopTeams, resourceId, resourceType]);
@@ -379,7 +379,7 @@ export function DataAccessPage() {
         {requiresWorkshop ? (
           <Select value={scope.workshopId || undefined} onValueChange={(workshopId) => {
             onChange({ workshopId, teamId: "" });
-            if (scope.scopeType === "TEAM") void cacheWorkshopTeams(workshopId);
+            if (scope.scopeType === "TEAM") void cacheWorkshopTeams(workshopId).catch(() => undefined);
           }}>
             <SelectTrigger><SelectValue placeholder="选择车间" /></SelectTrigger>
             <SelectContent>
