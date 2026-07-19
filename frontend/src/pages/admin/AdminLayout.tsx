@@ -45,6 +45,7 @@ import {
   type KnowledgeDocumentSearchItem
 } from "@/services/knowledgeService";
 import { Avatar } from "@/components/common/Avatar";
+import { IcpRecordLink } from "@/components/common/IcpRecordLink";
 
 type MenuChild = {
   path: string;
@@ -721,6 +722,7 @@ export function AdminLayout() {
             })}
           </nav>
           <Outlet />
+          <IcpRecordLink />
         </div>
       </div>
 
