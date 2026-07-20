@@ -42,9 +42,27 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class KnowledgeAccessServiceImplTest {
+
+    @Test
+    void deletesAllScopesForRemovedResource() {
+        KnowledgeResourceScopeMapper resourceScopeMapper = mock(KnowledgeResourceScopeMapper.class);
+        KnowledgeAccessServiceImpl service = new KnowledgeAccessServiceImpl(
+                mock(WorkshopMapper.class),
+                mock(WorkshopTeamMapper.class),
+                mock(UserDataScopeMapper.class),
+                resourceScopeMapper,
+                mock(KnowledgeBaseMapper.class),
+                mock(KnowledgeDocumentMapper.class),
+                mock(UserMapper.class));
+
+        service.deleteResourceScopes(KnowledgeResourceType.DOCUMENT, "document-1");
+
+        verify(resourceScopeMapper).delete(any());
+    }
 
     @Test
     void documentScopeOverridesKnowledgeBaseScopeForTeamUser() {

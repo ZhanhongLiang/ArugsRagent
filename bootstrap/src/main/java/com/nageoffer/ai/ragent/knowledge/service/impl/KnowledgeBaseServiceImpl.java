@@ -28,6 +28,7 @@ import com.nageoffer.ai.ragent.knowledge.controller.request.KnowledgeBasePageReq
 import com.nageoffer.ai.ragent.knowledge.controller.request.KnowledgeBaseUpdateRequest;
 import com.nageoffer.ai.ragent.knowledge.controller.vo.KnowledgeBaseVO;
 import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
+import com.nageoffer.ai.ragent.knowledge.access.enums.KnowledgeResourceType;
 import com.nageoffer.ai.ragent.knowledge.access.service.KnowledgeAccessService;
 import com.nageoffer.ai.ragent.knowledge.dao.entity.KnowledgeBaseDO;
 import com.nageoffer.ai.ragent.knowledge.dao.entity.KnowledgeDocumentDO;
@@ -214,6 +215,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         kbDO.setDeleted(1);
         kbDO.setUpdatedBy(UserContext.getUsername());
         knowledgeBaseMapper.deleteById(kbDO);
+        knowledgeAccessService.deleteResourceScopes(KnowledgeResourceType.KNOWLEDGE_BASE, kbId);
     }
 
     @Override

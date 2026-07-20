@@ -319,6 +319,13 @@ public class KnowledgeAccessServiceImpl implements KnowledgeAccessService {
         scopes.forEach(resourceScopeMapper::insert);
     }
 
+    @Override
+    public void deleteResourceScopes(KnowledgeResourceType resourceType, String resourceId) {
+        resourceScopeMapper.delete(Wrappers.lambdaQuery(KnowledgeResourceScopeDO.class)
+                .eq(KnowledgeResourceScopeDO::getResourceType, resourceType)
+                .eq(KnowledgeResourceScopeDO::getResourceId, resourceId));
+    }
+
     private UserOrganizationScope loadUserOrganizationScope(String userId) {
         List<UserDataScopeDO> scopes = userDataScopeMapper.selectList(Wrappers.lambdaQuery(UserDataScopeDO.class)
                 .eq(UserDataScopeDO::getUserId, userId));

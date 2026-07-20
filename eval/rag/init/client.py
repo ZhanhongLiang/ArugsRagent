@@ -9,7 +9,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(os.getenv("RAG_EVAL_ROOT", str(DEFAULT_ROOT))).resolve()
 STATE = ROOT / "state"
 BASE_URL = os.getenv("RAGENT_BASE_URL", "http://localhost:9090/api/ragent").rstrip("/")
 USERNAME = os.getenv("RAGENT_USERNAME", "admin")
@@ -47,7 +48,7 @@ class RagentClient:
             req_headers["Content-Type"] = "application/json; charset=utf-8"
         req = urllib.request.Request(url, data=body, method=method, headers=req_headers)
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with self._open(req) as resp:
                 text = resp.read().decode("utf-8")
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", errors="replace")
@@ -61,8 +62,17 @@ class RagentClient:
             return payload.get("data")
         return payload
 
-    def post_json(self, path: str, data: dict, auth=True):
+    def _open(self, request):
+        hostname = urllib.parse.urlparse(self.base_url).hostname
+        if hostname in {"localhost", "127.0.0.1", "::1"}:
+            return urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=120)
+        return urllib.request.urlopen(request, timeout=120)
+
+    def post_json(self, path: str, data: object, auth=True):
         return self.request("POST", path, body=data, auth=auth)
+
+    def put_json(self, path: str, data: object):
+        return self.request("PUT", path, body=data)
 
     def get_json(self, path: str):
         return self.request("GET", path)

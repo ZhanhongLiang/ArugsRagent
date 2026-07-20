@@ -19,17 +19,26 @@ def read_jsonl(path: Path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", default="eval/rag/datasets/eval_set_v1.jsonl")
+    parser.add_argument("--dataset", default="eval/rag/equipment/datasets/eval_set_equipment_150.jsonl")
     parser.add_argument("--out", default=None)
     parser.add_argument("--sleep", type=float, default=0)
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     dataset = Path(args.dataset)
-    run_path = Path(args.out) if args.out else ROOT / "runs" / f"v1_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
+    run_path = (Path(args.out) if args.out else dataset.parent.parent / "runs"
+                / f"equipment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl")
     run_path.parent.mkdir(parents=True, exist_ok=True)
+    completed_ids = set()
+    if args.resume and run_path.exists():
+        completed_ids = {row["query_id"] for row in read_jsonl(run_path)}
     client = RagentClient()
     client.login()
-    with run_path.open("w", encoding="utf-8", newline="\n") as out:
+    mode = "a" if args.resume else "w"
+    with run_path.open(mode, encoding="utf-8", newline="\n") as out:
         for row in read_jsonl(dataset):
+            if row["query_id"] in completed_ids:
+                print(f"{row['query_id']} skip", flush=True)
+                continue
             start = time.time()
             result = {**row, "final_status": "success", "error": None}
             try:
@@ -51,7 +60,8 @@ def main():
                 result["error"] = str(e)
             result["runner_elapsed_ms"] = int((time.time() - start) * 1000)
             out.write(json.dumps(result, ensure_ascii=False) + "\n")
-            print(f"{row['query_id']} {result['final_status']}")
+            out.flush()
+            print(f"{row['query_id']} {result['final_status']}", flush=True)
             if args.sleep:
                 time.sleep(args.sleep)
     print(run_path)

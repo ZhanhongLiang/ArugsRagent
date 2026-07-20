@@ -17,6 +17,7 @@ def iter_docs(catalog):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--force", action="store_true")
     parser.add_argument("--sleep", type=float, default=0)
     args = parser.parse_args()
 
@@ -35,6 +36,14 @@ def main():
 
     client = RagentClient()
     client.login()
+    if args.force:
+        for doc_id, stored in list(doc_map.items()):
+            if doc_id not in catalog:
+                continue
+            client.delete(f"/knowledge-base/docs/{stored['ragent_doc_id']}")
+            doc_map.pop(doc_id)
+            save_json(STATE / "doc_id_map.json", doc_map)
+            print(f"deleted previous document {doc_id}")
     for doc_id, meta, path in iter_docs(catalog):
         if doc_id in doc_map:
             print(f"skip uploaded {doc_id}")

@@ -41,6 +41,7 @@ import com.nageoffer.ai.ragent.framework.context.UserContext;
 import com.nageoffer.ai.ragent.framework.exception.ClientException;
 import com.nageoffer.ai.ragent.framework.mq.producer.MessageQueueProducer;
 import com.nageoffer.ai.ragent.knowledge.access.domain.KnowledgeAccessScope;
+import com.nageoffer.ai.ragent.knowledge.access.enums.KnowledgeResourceType;
 import com.nageoffer.ai.ragent.knowledge.access.service.KnowledgeAccessService;
 import com.nageoffer.ai.ragent.ingestion.dao.entity.IngestionPipelineDO;
 import com.nageoffer.ai.ragent.ingestion.dao.mapper.IngestionPipelineMapper;
@@ -604,6 +605,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
         documentDO.setDeleted(1);
         documentDO.setUpdatedBy(UserContext.getUsername());
         documentMapper.deleteById(documentDO);
+        knowledgeAccessService.deleteResourceScopes(KnowledgeResourceType.DOCUMENT, docId);
 
         String collectionName = resolveCollectionName(documentDO.getKbId());
         vectorStoreService.deleteDocumentVectors(collectionName, docId);

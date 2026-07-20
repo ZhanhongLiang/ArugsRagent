@@ -1,0 +1,26 @@
+{
+  "product": {
+    "kb_id": "2076561305073950720",
+    "name": "清居智能 商品知识库",
+    "collection_name": "kb-qingju-product",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "manual": {
+    "kb_id": "2076561308995624960",
+    "name": "清居智能 使用手册库",
+    "collection_name": "kb-qingju-manual",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "policy": {
+    "kb_id": "2076561309310197760",
+    "name": "清居智能 服务政策库",
+    "collection_name": "kb-qingju-policy",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "faq": {
+    "kb_id": "2076561309511524352",
+    "name": "清居智能 故障 FAQ 库",
+    "collection_name": "kb-qingju-faq",
+    "embedding_model": "qwen-emb-8b"
+  }
+}

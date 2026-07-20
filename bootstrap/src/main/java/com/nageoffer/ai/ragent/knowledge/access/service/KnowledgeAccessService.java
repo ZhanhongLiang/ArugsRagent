@@ -64,4 +64,6 @@ public interface KnowledgeAccessService {
     void replaceResourceScopes(KnowledgeResourceType resourceType,
                                String resourceId,
                                KnowledgeResourceScopeReplaceRequest request);
+
+    void deleteResourceScopes(KnowledgeResourceType resourceType, String resourceId);
 }

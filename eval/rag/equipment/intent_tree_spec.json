@@ -1,0 +1,209 @@
+{
+  "domains": {
+    "EQUIPMENT_KB": "设备运维知识问答",
+    "EQUIPMENT_MCP": "设备运维实时查询",
+    "EQUIPMENT_SYSTEM": "设备运维会话兜底"
+  },
+  "categories": {
+    "EQUIPMENT_MODEL_KB": [
+      "EQUIPMENT_KB",
+      "型号参数与产线"
+    ],
+    "EQUIPMENT_FAULT_KB": [
+      "EQUIPMENT_KB",
+      "故障诊断与安全"
+    ],
+    "EQUIPMENT_MAINTENANCE_KB": [
+      "EQUIPMENT_KB",
+      "点检保养与维修"
+    ],
+    "EQUIPMENT_REALTIME": [
+      "EQUIPMENT_MCP",
+      "实时设备与工单数据"
+    ],
+    "EQUIPMENT_CHAT": [
+      "EQUIPMENT_SYSTEM",
+      "问候与范围外问题"
+    ]
+  },
+  "intents": [
+    {
+      "code": "EQ_MODEL_SPEC",
+      "name": "设备型号参数",
+      "parent": "EQUIPMENT_MODEL_KB",
+      "kind": 0,
+      "kb_key": "models",
+      "description": "查询设备型号、技术参数、适用产线和工艺边界。",
+      "examples": [
+        "CNC-MT-1060 的主轴和行程参数是什么？",
+        "ROB-IR-20 适用于哪条产线？"
+      ]
+    },
+    {
+      "code": "EQ_MODEL_COMPARE",
+      "name": "设备型号对比",
+      "parent": "EQUIPMENT_MODEL_KB",
+      "kind": 0,
+      "kb_key": "models",
+      "description": "对比同类设备的额定能力、产线适配和使用边界。",
+      "examples": [
+        "CNC-MT-850 和 CNC-MT-1270 怎么选？",
+        "ROB-IR-10 与 ROB-IR-20 的负载差异？"
+      ]
+    },
+    {
+      "code": "EQ_FAULT_DIAGNOSIS",
+      "name": "故障诊断与处置",
+      "parent": "EQUIPMENT_FAULT_KB",
+      "kind": 0,
+      "kb_key": "faults",
+      "description": "说明故障码含义、危险等级、可能原因和安全处置步骤。",
+      "examples": [
+        "CNC-203 是什么问题？",
+        "机器人碰撞报警应该先做什么？"
+      ]
+    },
+    {
+      "code": "EQ_INSPECTION_SOP",
+      "name": "点检 SOP",
+      "parent": "EQUIPMENT_MAINTENANCE_KB",
+      "kind": 0,
+      "kb_key": "maintenance",
+      "description": "查询班前点检、保养步骤、安全检查和质量闭环要求。",
+      "examples": [
+        "变频输送线班前点检看哪些？",
+        "机器人保养后如何验证？"
+      ]
+    },
+    {
+      "code": "EQ_REPAIR_CASE",
+      "name": "维修案例与备件规则",
+      "parent": "EQUIPMENT_MAINTENANCE_KB",
+      "kind": 0,
+      "kb_key": "repair",
+      "description": "查询维修案例、备件适配规则和工单闭环要求。",
+      "examples": [
+        "CNC-MT-1060 的伺服报警怎么维修？",
+        "备件替代需要注意什么？"
+      ]
+    },
+    {
+      "code": "EQ_OPERATION_SAFETY",
+      "name": "设备操作安全",
+      "parent": "EQUIPMENT_FAULT_KB",
+      "kind": 0,
+      "kb_key": "faults",
+      "description": "查询停机隔离、危险区域控制和报警处置中的安全边界。",
+      "examples": [
+        "机器人碰撞报警后可以直接复位吗？",
+        "输送线过流后谁可以试车？"
+      ]
+    },
+    {
+      "code": "EQ_MAINTENANCE_RECORD",
+      "name": "保养记录与交接",
+      "parent": "EQUIPMENT_MAINTENANCE_KB",
+      "kind": 0,
+      "kb_key": "maintenance",
+      "description": "查询保养记录、交接班信息和质量闭环要求。",
+      "examples": [
+        "保养后需要记录什么？",
+        "交接班怎么记录设备异常？"
+      ]
+    },
+    {
+      "code": "EQ_DEVICE_MODEL_QUERY",
+      "name": "实时型号查询",
+      "parent": "EQUIPMENT_REALTIME",
+      "kind": 2,
+      "mcp_tool_id": "device_model_query",
+      "description": "按型号或类别查询设备参数、产线与组织归属。",
+      "examples": [
+        "查一下 CNC-MT-1060 的适用产线",
+        "装配车间有哪些工业机器人？"
+      ]
+    },
+    {
+      "code": "EQ_DEVICE_STATUS_QUERY",
+      "name": "实时设备状态",
+      "parent": "EQUIPMENT_REALTIME",
+      "kind": 2,
+      "mcp_tool_id": "device_status_query",
+      "description": "查询设备运行状态、运行小时和当前报警。",
+      "examples": [
+        "CNC-02 现在什么状态？",
+        "ROB-02 有什么告警？"
+      ]
+    },
+    {
+      "code": "EQ_FAULT_CODE_QUERY",
+      "name": "实时故障码查询",
+      "parent": "EQUIPMENT_REALTIME",
+      "kind": 2,
+      "mcp_tool_id": "fault_code_query",
+      "description": "查询故障码的原因、危险等级和立即处置。",
+      "examples": [
+        "查 CNC-203 的危险等级",
+        "ROB-302 要怎么处置？"
+      ]
+    },
+    {
+      "code": "EQ_WORK_ORDER_QUERY",
+      "name": "维修工单查询",
+      "parent": "EQUIPMENT_REALTIME",
+      "kind": 2,
+      "mcp_tool_id": "work_order_query",
+      "description": "查询工单状态、处理人和预计完成时间。",
+      "examples": [
+        "WO-20260719-001 到哪里了？",
+        "ROB-02 的工单谁在处理？"
+      ]
+    },
+    {
+      "code": "EQ_SPARE_PART_QUERY",
+      "name": "备件库存查询",
+      "parent": "EQUIPMENT_REALTIME",
+      "kind": 2,
+      "mcp_tool_id": "spare_part_inventory_query",
+      "description": "查询备件库存、库位和替代型号。",
+      "examples": [
+        "SP-CNC-SERVO-01 还有库存吗？",
+        "SP-CONV-VFD-02 放在哪？"
+      ]
+    },
+    {
+      "code": "EQ_MAINTENANCE_PLAN_QUERY",
+      "name": "保养计划查询",
+      "parent": "EQUIPMENT_REALTIME",
+      "kind": 2,
+      "mcp_tool_id": "maintenance_plan_query",
+      "description": "查询保养周期、下次保养时间和点检清单。",
+      "examples": [
+        "ROB-02 下次保养是什么时候？",
+        "CNC-MT-1270 的保养计划？"
+      ]
+    },
+    {
+      "code": "EQ_GREETING",
+      "name": "设备运维问候",
+      "parent": "EQUIPMENT_CHAT",
+      "kind": 1,
+      "description": "普通问候和能力介绍，不触发检索或工具。",
+      "examples": [
+        "你好",
+        "你能处理哪些设备问题？"
+      ]
+    },
+    {
+      "code": "EQ_OUT_OF_SCOPE",
+      "name": "设备运维范围外问题",
+      "parent": "EQUIPMENT_CHAT",
+      "kind": 1,
+      "description": "与设备运维、故障、保养、工单或备件无关的问题。",
+      "examples": [
+        "帮我预测股票",
+        "写一篇小说"
+      ]
+    }
+  ]
+}

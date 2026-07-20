@@ -1,0 +1,482 @@
+{
+  "CNC-MT-850-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CNC-MT-850-MODELS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-MT-850",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CNC-MT-850-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CNC-MT-850-FAULTS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-MT-850",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CNC-MT-850-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CNC-MT-850-MAINTENANCE.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-MT-850",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CNC-MT-850-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CNC-MT-850-REPAIR.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-MT-850",
+    "document_type": "维修案例与备件清单"
+  },
+  "CNC-MT-1060-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CNC-MT-1060-MODELS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-MT-1060",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CNC-MT-1060-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CNC-MT-1060-FAULTS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-MT-1060",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CNC-MT-1060-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CNC-MT-1060-MAINTENANCE.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-MT-1060",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CNC-MT-1060-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CNC-MT-1060-REPAIR.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-MT-1060",
+    "document_type": "维修案例与备件清单"
+  },
+  "CNC-MT-1270-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CNC-MT-1270-MODELS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CNC-MT-1270",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CNC-MT-1270-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CNC-MT-1270-FAULTS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CNC-MT-1270",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CNC-MT-1270-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CNC-MT-1270-MAINTENANCE.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CNC-MT-1270",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CNC-MT-1270-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CNC-MT-1270-REPAIR.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CNC-MT-1270",
+    "document_type": "维修案例与备件清单"
+  },
+  "CNC-LT-500-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CNC-LT-500-MODELS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CNC-LT-500",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CNC-LT-500-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CNC-LT-500-FAULTS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CNC-LT-500",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CNC-LT-500-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CNC-LT-500-MAINTENANCE.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CNC-LT-500",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CNC-LT-500-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CNC-LT-500-REPAIR.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CNC-LT-500",
+    "document_type": "维修案例与备件清单"
+  },
+  "CNC-GR-630-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CNC-GR-630-MODELS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-GR-630",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CNC-GR-630-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CNC-GR-630-FAULTS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-GR-630",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CNC-GR-630-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CNC-GR-630-MAINTENANCE.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-GR-630",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CNC-GR-630-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CNC-GR-630-REPAIR.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CNC-GR-630",
+    "document_type": "维修案例与备件清单"
+  },
+  "ROB-IR-10-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/ROB-IR-10-MODELS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-IR-10",
+    "document_type": "型号参数与工艺边界"
+  },
+  "ROB-IR-10-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/ROB-IR-10-FAULTS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-IR-10",
+    "document_type": "故障诊断与安全处置"
+  },
+  "ROB-IR-10-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/ROB-IR-10-MAINTENANCE.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-IR-10",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "ROB-IR-10-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/ROB-IR-10-REPAIR.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-IR-10",
+    "document_type": "维修案例与备件清单"
+  },
+  "ROB-IR-20-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/ROB-IR-20-MODELS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-IR-20",
+    "document_type": "型号参数与工艺边界"
+  },
+  "ROB-IR-20-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/ROB-IR-20-FAULTS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-IR-20",
+    "document_type": "故障诊断与安全处置"
+  },
+  "ROB-IR-20-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/ROB-IR-20-MAINTENANCE.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-IR-20",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "ROB-IR-20-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/ROB-IR-20-REPAIR.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-IR-20",
+    "document_type": "维修案例与备件清单"
+  },
+  "ROB-WL-12-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/ROB-WL-12-MODELS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "ROB-WL-12",
+    "document_type": "型号参数与工艺边界"
+  },
+  "ROB-WL-12-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/ROB-WL-12-FAULTS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "ROB-WL-12",
+    "document_type": "故障诊断与安全处置"
+  },
+  "ROB-WL-12-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/ROB-WL-12-MAINTENANCE.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "ROB-WL-12",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "ROB-WL-12-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/ROB-WL-12-REPAIR.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "ROB-WL-12",
+    "document_type": "维修案例与备件清单"
+  },
+  "ROB-PAL-25-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/ROB-PAL-25-MODELS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "ROB-PAL-25",
+    "document_type": "型号参数与工艺边界"
+  },
+  "ROB-PAL-25-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/ROB-PAL-25-FAULTS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "ROB-PAL-25",
+    "document_type": "故障诊断与安全处置"
+  },
+  "ROB-PAL-25-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/ROB-PAL-25-MAINTENANCE.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "ROB-PAL-25",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "ROB-PAL-25-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/ROB-PAL-25-REPAIR.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "ROB-PAL-25",
+    "document_type": "维修案例与备件清单"
+  },
+  "ROB-SC-04-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/ROB-SC-04-MODELS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-SC-04",
+    "document_type": "型号参数与工艺边界"
+  },
+  "ROB-SC-04-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/ROB-SC-04-FAULTS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-SC-04",
+    "document_type": "故障诊断与安全处置"
+  },
+  "ROB-SC-04-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/ROB-SC-04-MAINTENANCE.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-SC-04",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "ROB-SC-04-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/ROB-SC-04-REPAIR.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "ROB-SC-04",
+    "document_type": "维修案例与备件清单"
+  },
+  "CONV-VF-200-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CONV-VF-200-MODELS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CONV-VF-200",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CONV-VF-200-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CONV-VF-200-FAULTS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CONV-VF-200",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CONV-VF-200-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CONV-VF-200-MAINTENANCE.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CONV-VF-200",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CONV-VF-200-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CONV-VF-200-REPAIR.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M1",
+    "model": "CONV-VF-200",
+    "document_type": "维修案例与备件清单"
+  },
+  "CONV-VF-300-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CONV-VF-300-MODELS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "CONV-VF-300",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CONV-VF-300-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CONV-VF-300-FAULTS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "CONV-VF-300",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CONV-VF-300-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CONV-VF-300-MAINTENANCE.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "CONV-VF-300",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CONV-VF-300-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CONV-VF-300-REPAIR.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-A",
+    "model": "CONV-VF-300",
+    "document_type": "维修案例与备件清单"
+  },
+  "CONV-VF-450-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CONV-VF-450-MODELS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CONV-VF-450",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CONV-VF-450-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CONV-VF-450-FAULTS.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CONV-VF-450",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CONV-VF-450-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CONV-VF-450-MAINTENANCE.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CONV-VF-450",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CONV-VF-450-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CONV-VF-450-REPAIR.md",
+    "workshop_code": "MACHINING",
+    "team_code": "TEAM-M2",
+    "model": "CONV-VF-450",
+    "document_type": "维修案例与备件清单"
+  },
+  "CONV-AS-600-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CONV-AS-600-MODELS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "CONV-AS-600",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CONV-AS-600-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CONV-AS-600-FAULTS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "CONV-AS-600",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CONV-AS-600-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CONV-AS-600-MAINTENANCE.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "CONV-AS-600",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CONV-AS-600-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CONV-AS-600-REPAIR.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "CONV-AS-600",
+    "document_type": "维修案例与备件清单"
+  },
+  "CONV-AS-800-MODELS": {
+    "kb_key": "models",
+    "rel_path": "knowledge_base/01_models/CONV-AS-800-MODELS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "CONV-AS-800",
+    "document_type": "型号参数与工艺边界"
+  },
+  "CONV-AS-800-FAULTS": {
+    "kb_key": "faults",
+    "rel_path": "knowledge_base/02_faults/CONV-AS-800-FAULTS.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "CONV-AS-800",
+    "document_type": "故障诊断与安全处置"
+  },
+  "CONV-AS-800-MAINTENANCE": {
+    "kb_key": "maintenance",
+    "rel_path": "knowledge_base/03_maintenance/CONV-AS-800-MAINTENANCE.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "CONV-AS-800",
+    "document_type": "点检 SOP 与保养计划"
+  },
+  "CONV-AS-800-REPAIR": {
+    "kb_key": "repair",
+    "rel_path": "knowledge_base/04_repair/CONV-AS-800-REPAIR.md",
+    "workshop_code": "ASSEMBLY",
+    "team_code": "TEAM-B",
+    "model": "CONV-AS-800",
+    "document_type": "维修案例与备件清单"
+  }
+}

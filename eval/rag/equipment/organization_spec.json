@@ -1,0 +1,16 @@
+{
+  "MACHINING": {
+    "name": "机加工车间",
+    "teams": {
+      "TEAM-M1": "机加一班",
+      "TEAM-M2": "机加二班"
+    }
+  },
+  "ASSEMBLY": {
+    "name": "装配车间",
+    "teams": {
+      "TEAM-A": "装配一班",
+      "TEAM-B": "装配二班"
+    }
+  }
+}
