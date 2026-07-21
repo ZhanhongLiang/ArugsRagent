@@ -46,6 +46,7 @@ import com.nageoffer.ai.ragent.infra.token.TokenCounterService;
 import com.nageoffer.ai.ragent.knowledge.enums.DocumentStatus;
 import com.nageoffer.ai.ragent.rag.core.vector.VectorStoreService;
 import com.nageoffer.ai.ragent.knowledge.service.KnowledgeChunkService;
+import com.nageoffer.ai.ragent.knowledge.service.support.DocumentVectorMetadataSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -85,6 +86,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     private final TokenCounterService tokenCounterService;
     private final VectorStoreService vectorStoreService;
     private final TransactionOperations transactionOperations;
+    private final DocumentVectorMetadataSupport documentVectorMetadataSupport;
 
     @Override
     public IPage<KnowledgeChunkVO> pageQuery(String docId, KnowledgeChunkPageRequest requestParam) {
@@ -161,7 +163,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
                 .setSql("chunk_count = chunk_count + 1"));
 
         // 同步写入向量库
-        syncChunkToVector(collectionName, docId, chunkDO, embeddingModel);
+        syncChunkToVector(collectionName, docId, documentDO, chunkDO, embeddingModel);
 
         return BeanUtil.toBean(chunkDO, KnowledgeChunkVO.class);
     }
@@ -250,6 +252,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
                     .toList();
             if (CollUtil.isNotEmpty(vectorChunks)) {
                 attachEmbeddings(vectorChunks, embeddingModel);
+                documentVectorMetadataSupport.attach(documentDO.getMetadataJson(), vectorChunks);
                 vectorStoreService.indexDocumentChunks(collectionName, docId, vectorChunks);
             }
         }
@@ -290,16 +293,14 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
         log.info("更新 Chunk 成功, kbId={}, docId={}, chunkId={}", documentDO.getKbId(), docId, chunkId);
 
         // 同步向量数据库
-        vectorStoreService.updateChunk(
-                collectionName,
-                docId,
-                VectorChunk.builder()
-                        .chunkId(chunkId)
-                        .content(newContent)
-                        .index(chunkDO.getChunkIndex())
-                        .embedding(toArray(embedContent(newContent, embeddingModel)))
-                        .build()
-        );
+        VectorChunk vectorChunk = VectorChunk.builder()
+                .chunkId(chunkId)
+                .content(newContent)
+                .index(chunkDO.getChunkIndex())
+                .embedding(toArray(embedContent(newContent, embeddingModel)))
+                .build();
+        documentVectorMetadataSupport.attach(documentDO.getMetadataJson(), List.of(vectorChunk));
+        vectorStoreService.updateChunk(collectionName, docId, vectorChunk);
     }
 
     @Override
@@ -362,7 +363,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
 
         if (enabled) {
             String embeddingModel = kbDO.getEmbeddingModel();
-            syncChunkToVector(collectionName, docId, chunkDO, embeddingModel);
+            syncChunkToVector(collectionName, docId, documentDO, chunkDO, embeddingModel);
         } else {
             deleteChunkFromVector(collectionName, chunkId);
         }
@@ -424,6 +425,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
                             .build())
                     .collect(Collectors.toList());
             attachEmbeddings(vectorChunks, kbDO.getEmbeddingModel());
+            documentVectorMetadataSupport.attach(documentDO.getMetadataJson(), vectorChunks);
 
             transactionOperations.executeWithoutResult(status -> {
                 chunkMapper.update(
@@ -505,7 +507,8 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
     /**
      * 将单个 chunk 同步到向量库
      */
-    private void syncChunkToVector(String collectionName, String docId, KnowledgeChunkDO chunkDO, String embeddingModel) {
+    private void syncChunkToVector(String collectionName, String docId, KnowledgeDocumentDO documentDO,
+                                   KnowledgeChunkDO chunkDO, String embeddingModel) {
         // A single chunk vector write follows: embed content -> convert to float[] -> upsert into vector store.
         List<Float> embedding = embedContent(chunkDO.getContent(), embeddingModel);
         float[] vector = toArray(embedding);
@@ -516,6 +519,7 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
                 .chunkId(String.valueOf(chunkDO.getId()))
                 .embedding(vector)
                 .build();
+        documentVectorMetadataSupport.attach(documentDO.getMetadataJson(), List.of(chunk));
         vectorStoreService.indexDocumentChunks(collectionName, docId, List.of(chunk));
 
         log.debug("同步 Chunk 到向量库成功, collectionName={}, docId={}, chunkId={}", collectionName, docId, chunkDO.getId());

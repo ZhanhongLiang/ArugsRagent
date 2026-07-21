@@ -1,0 +1,41 @@
+rag:
+  search:
+    channels:
+      intent-directed:
+        supplemental-collections:
+          CELL_FAULT_ELECTRODE_COATING_FEED:
+            - kb-cell-equipment-manual
+            - kb-cell-maintenance-standard
+          CELL_FAULT_ELECTRODE_WEB_TENSION:
+            - kb-cell-equipment-manual
+            - kb-cell-maintenance-standard
+          CELL_FAULT_ASSEMBLY_WIND_TENSION:
+            - kb-cell-equipment-manual
+            - kb-cell-maintenance-standard
+          CELL_FAULT_ASSEMBLY_ULTRASONIC_WELD:
+            - kb-cell-equipment-manual
+            - kb-cell-maintenance-standard
+          CELL_FAULT_FORMATION_FILL_QUANTITY:
+            - kb-cell-equipment-manual
+            - kb-cell-maintenance-standard
+          CELL_FAULT_FORMATION_FORMATION_CHANNEL:
+            - kb-cell-equipment-manual
+            - kb-cell-maintenance-standard
+          CELL_FAULT_UTILITY_PLC_IO:
+            - kb-cell-automation-software
+            - kb-cell-equipment-manual
+        metadata-filters:
+          CELL_FAULT_ELECTRODE_COATING_FEED:
+            process_code: coating
+          CELL_FAULT_ELECTRODE_WEB_TENSION:
+            process_code: [calender, slitting]
+          CELL_FAULT_ASSEMBLY_WIND_TENSION:
+            process_code: winding
+          CELL_FAULT_ASSEMBLY_ULTRASONIC_WELD:
+            process_code: tab_welding
+          CELL_FAULT_FORMATION_FILL_QUANTITY:
+            process_code: filling
+          CELL_FAULT_FORMATION_FORMATION_CHANNEL:
+            process_code: formation
+          CELL_FAULT_UTILITY_PLC_IO:
+            process_code: [automation, utility]

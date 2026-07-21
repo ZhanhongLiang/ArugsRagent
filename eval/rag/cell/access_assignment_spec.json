@@ -1,0 +1,64 @@
+{
+  "principles": [
+    "用户数据范围与知识资源 ACL 分离；前者说明用户可见组织，后者说明资源开放组织。",
+    "文档 ACL 存在时覆盖知识库 ACL；工艺配方、软件备份、质量根因默认不全局开放。",
+    "管理员具有现有 allAccess 管理权限；供应商仅分配被授权班组，禁止默认工作坊级权限。"
+  ],
+  "role_templates": {
+    "operator": "TEAM：所属班组",
+    "team_leader": "TEAM：所属班组",
+    "equipment_technician": "WORKSHOP：所属车间",
+    "process_engineer": "WORKSHOP：负责车间；产品配方文件仍由文档 ACL 约束",
+    "quality_engineer": "WORKSHOP：QUALITY；按需要增加受审计的生产车间范围",
+    "ehs_engineer": "WORKSHOP：全部五个车间；EHS GLOBAL 文档对已登录用户开放",
+    "vendor_engineer": "TEAM：显式授权班组",
+    "admin": "现有 admin allAccess"
+  },
+  "sample_assignments": {
+    "cell_operator_wind": [
+      {
+        "scope_type": "TEAM",
+        "workshop_code": "ASSEMBLY",
+        "team_code": "ASSEMBLY-WIND"
+      }
+    ],
+    "cell_technician_assembly": [
+      {
+        "scope_type": "WORKSHOP",
+        "workshop_code": "ASSEMBLY"
+      }
+    ],
+    "cell_quality_engineer": [
+      {
+        "scope_type": "WORKSHOP",
+        "workshop_code": "QUALITY"
+      },
+      {
+        "scope_type": "WORKSHOP",
+        "workshop_code": "FORMATION"
+      }
+    ],
+    "cell_ehs_engineer": [
+      {
+        "scope_type": "WORKSHOP",
+        "workshop_code": "ELECTRODE"
+      },
+      {
+        "scope_type": "WORKSHOP",
+        "workshop_code": "ASSEMBLY"
+      },
+      {
+        "scope_type": "WORKSHOP",
+        "workshop_code": "FORMATION"
+      },
+      {
+        "scope_type": "WORKSHOP",
+        "workshop_code": "QUALITY"
+      },
+      {
+        "scope_type": "WORKSHOP",
+        "workshop_code": "UTILITY"
+      }
+    ]
+  }
+}

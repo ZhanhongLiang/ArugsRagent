@@ -47,6 +47,30 @@ def normalize_leaf(item: dict | list) -> dict:
     }
 
 
+def normalize_domain(code: str, value: str | dict) -> dict:
+    if isinstance(value, str):
+        return {"code": code, "name": value, "kind": 1}
+    return {
+        "code": code,
+        "name": value.get("name", code),
+        "kind": value.get("kind", 1),
+        "description": value.get("description", value.get("name", code)),
+    }
+
+
+def normalize_category(code: str, value: list | dict) -> dict:
+    if isinstance(value, list):
+        parent, name = value
+        return {"code": code, "parent": parent, "name": name, "kind": 1}
+    return {
+        "code": code,
+        "parent": value["parent"],
+        "name": value.get("name", code),
+        "kind": value.get("kind", 1),
+        "description": value.get("description", value.get("name", code)),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
@@ -62,29 +86,30 @@ def main() -> None:
     if not args.dry_run:
         client.login()
 
-    for code, name in spec["domains"].items():
+    for code, value in spec["domains"].items():
+        item = normalize_domain(code, value)
         create(client, intent_ids, code, {
-            "intentCode": code,
-            "name": name,
+            "intentCode": item["code"],
+            "name": item["name"],
             "level": 0,
             "parentCode": None,
-            "description": name,
+            "description": item.get("description", item["name"]),
             "examples": [],
-            "kind": 1,
+            "kind": item["kind"],
             "sortOrder": 0,
             "enabled": 1,
         }, args.dry_run)
 
     for code, value in spec["categories"].items():
-        parent, name = value
+        item = normalize_category(code, value)
         create(client, intent_ids, code, {
-            "intentCode": code,
-            "name": name,
+            "intentCode": item["code"],
+            "name": item["name"],
             "level": 1,
-            "parentCode": parent,
-            "description": name,
+            "parentCode": item["parent"],
+            "description": item.get("description", item["name"]),
             "examples": [],
-            "kind": 1,
+            "kind": item["kind"],
             "sortOrder": 0,
             "enabled": 1,
         }, args.dry_run)

@@ -84,8 +84,16 @@ public class MilvusRetrieverService implements RetrieverService {
                 .topK(retrieveParam.getTopK())
                 .searchParams(params)
                 .outputFields(List.of("id", "content", "metadata"));
+        List<String> filterConditions = new ArrayList<>();
         if (accessScope != null && !accessScope.unrestricted()) {
-            builder.filter("metadata[\"doc_id\"] in [" + quoteValues(accessScope.readableDocumentIds()) + "]");
+            filterConditions.add("metadata[\"doc_id\"] in [" + quoteValues(accessScope.readableDocumentIds()) + "]");
+        }
+        String metadataFilter = MetadataFilterSupport.toMilvusExpression(retrieveParam.getMetadataFilters());
+        if (!metadataFilter.isBlank()) {
+            filterConditions.add(metadataFilter);
+        }
+        if (!filterConditions.isEmpty()) {
+            builder.filter(String.join(" AND ", filterConditions));
         }
         SearchReq req = builder.build();
 

@@ -21,6 +21,10 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * RAG 检索配置
  */
@@ -98,5 +102,17 @@ public class SearchChannelProperties {
          * TopK 倍数
          */
         private int topKMultiplier = 2;
+
+        /**
+         * Additional collections for a knowledge-base intent. The key is the stable intent code.
+         * An empty map preserves the original single-collection behavior.
+         */
+        private Map<String, List<String>> supplementalCollections = new LinkedHashMap<>();
+
+        /**
+         * Optional business metadata filters for a knowledge-base intent. The key is the stable intent code.
+         * An empty map preserves the original collection-only retrieval behavior.
+         */
+        private Map<String, Map<String, Object>> metadataFilters = new LinkedHashMap<>();
     }
 }

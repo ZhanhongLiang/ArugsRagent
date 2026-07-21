@@ -26,7 +26,12 @@ import com.nageoffer.ai.ragent.rag.core.retrieve.RetrieverService;
 import com.nageoffer.ai.ragent.rag.core.retrieve.channel.AbstractParallelRetriever;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 /**
@@ -45,16 +50,24 @@ public class IntentParallelRetriever extends AbstractParallelRetriever<IntentPar
      * 单个意图的检索任务。
      * intentTopK 在提交前已计算完成，避免异步线程读取变化中的配置或重复计算。
      */
-    public record IntentTask(NodeScore nodeScore, int intentTopK) {
+    public record IntentTask(NodeScore nodeScore, String collectionName, int intentTopK,
+                             Map<String, Object> metadataFilters) {
     }
 
     public IntentParallelRetriever(RetrieverService retrieverService,
                                    Executor executor,
-                                   KnowledgeAccessScope accessScope) {
+                                   KnowledgeAccessScope accessScope,
+                                   Map<String, List<String>> supplementalCollections,
+                                   Map<String, Map<String, Object>> metadataFilters) {
         super(executor);
         this.retrieverService = retrieverService;
         this.accessScope = accessScope;
+        this.supplementalCollections = supplementalCollections == null ? Map.of() : supplementalCollections;
+        this.metadataFilters = metadataFilters == null ? Map.of() : metadataFilters;
     }
+
+    private final Map<String, List<String>> supplementalCollections;
+    private final Map<String, Map<String, Object>> metadataFilters;
 
     /**
      * 为每个意图计算召回数量后并发检索。
@@ -67,10 +80,14 @@ public class IntentParallelRetriever extends AbstractParallelRetriever<IntentPar
                                                          int fallbackTopK,
                                                          int topKMultiplier) {
         List<IntentTask> intentTasks = targets.stream()
-                .map(nodeScore -> new IntentTask(
-                        nodeScore,
-                        resolveIntentTopK(nodeScore, fallbackTopK, topKMultiplier)
-                ))
+                .flatMap(nodeScore -> resolveCollections(nodeScore).stream()
+                        .filter(this::canReadCollection)
+                        .map(collectionName -> new IntentTask(
+                                nodeScore,
+                                collectionName,
+                                resolveIntentTopK(nodeScore, fallbackTopK, topKMultiplier),
+                                resolveMetadataFilters(nodeScore)
+                        )))
                 .toList();
         return super.executeParallelRetrieval(question, intentTasks, fallbackTopK);
     }
@@ -93,15 +110,16 @@ public class IntentParallelRetriever extends AbstractParallelRetriever<IntentPar
             // collectionName 将语义意图映射到实际向量集合，形成定向检索边界。
             return retrieverService.retrieve(
                     RetrieveRequest.builder()
-                            .collectionName(node.getCollectionName())
+                            .collectionName(task.collectionName())
                             .query(question)
                             .topK(task.intentTopK())
+                            .metadataFilters(task.metadataFilters())
                             .accessScope(accessScope)
                             .build()
             );
         } catch (Exception e) {
             log.error("意图检索失败 - 意图ID: {}, 意图名称: {}, Collection: {}, 错误: {}",
-                    node.getId(), node.getName(), node.getCollectionName(), e.getMessage(), e);
+                    node.getId(), node.getName(), task.collectionName(), e.getMessage(), e);
             return List.of();
         }
     }
@@ -137,5 +155,37 @@ public class IntentParallelRetriever extends AbstractParallelRetriever<IntentPar
         }
 
         return baseTopK * topKMultiplier;
+    }
+
+    private Collection<String> resolveCollections(NodeScore nodeScore) {
+        if (nodeScore == null || nodeScore.getNode() == null) {
+            return List.of();
+        }
+        IntentNode node = nodeScore.getNode();
+        Set<String> collections = new LinkedHashSet<>();
+        addIfPresent(collections, node.getCollectionName());
+        List<String> supplements = supplementalCollections.get(node.getId());
+        if (supplements != null) {
+            supplements.forEach(collectionName -> addIfPresent(collections, collectionName));
+        }
+        return new ArrayList<>(collections);
+    }
+
+    private boolean canReadCollection(String collectionName) {
+        return accessScope == null || accessScope.canReadCollection(collectionName);
+    }
+
+    private Map<String, Object> resolveMetadataFilters(NodeScore nodeScore) {
+        if (nodeScore == null || nodeScore.getNode() == null) {
+            return Map.of();
+        }
+        Map<String, Object> filters = metadataFilters.get(nodeScore.getNode().getId());
+        return filters == null ? Map.of() : new java.util.LinkedHashMap<>(filters);
+    }
+
+    private void addIfPresent(Set<String> collections, String collectionName) {
+        if (collectionName != null && !collectionName.isBlank()) {
+            collections.add(collectionName);
+        }
     }
 }

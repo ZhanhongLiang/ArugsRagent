@@ -1,0 +1,57 @@
+{
+  "equipment_manual": {
+    "name": "电芯设备手册与技术资料库",
+    "collection_name": "kb-cell-equipment-manual",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "electrode_fault": {
+    "name": "前段设备故障案例库",
+    "collection_name": "kb-cell-electrode-fault",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "assembly_fault": {
+    "name": "中段装配设备故障案例库",
+    "collection_name": "kb-cell-assembly-fault",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "formation_fault": {
+    "name": "后段注液化成故障案例库",
+    "collection_name": "kb-cell-formation-fault",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "utility_fault": {
+    "name": "公辅与环境设备故障库",
+    "collection_name": "kb-cell-utility-fault",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "maintenance_standard": {
+    "name": "点检保养与维修标准库",
+    "collection_name": "kb-cell-maintenance-standard",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "process_standard": {
+    "name": "工艺参数与作业标准库",
+    "collection_name": "kb-cell-process-standard",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "quality_root_cause": {
+    "name": "质量缺陷与根因知识库",
+    "collection_name": "kb-cell-quality-root-cause",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "automation_software": {
+    "name": "电气自动化与软件知识库",
+    "collection_name": "kb-cell-automation-software",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "ehs_emergency": {
+    "name": "安全、EHS 与应急知识库",
+    "collection_name": "kb-cell-ehs-emergency",
+    "embedding_model": "qwen-emb-8b"
+  },
+  "spare_tooling": {
+    "name": "备件、易损件与工装治具库",
+    "collection_name": "kb-cell-spare-tooling",
+    "embedding_model": "qwen-emb-8b"
+  }
+}

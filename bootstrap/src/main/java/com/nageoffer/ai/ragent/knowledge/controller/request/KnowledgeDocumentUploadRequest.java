@@ -62,6 +62,11 @@ public class KnowledgeDocumentUploadRequest {
     private String chunkConfig;
 
     /**
+     * 面向检索的业务元数据 JSON
+     */
+    private String metadataJson;
+
+    /**
      * 数据通道（Pipeline）ID
      * 仅在 processMode=pipeline 时有效
      */

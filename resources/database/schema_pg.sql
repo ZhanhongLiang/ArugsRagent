@@ -215,6 +215,7 @@ CREATE TABLE t_knowledge_document (
     schedule_cron    VARCHAR(64),
     chunk_strategy   VARCHAR(32),
     chunk_config     JSONB,
+    metadata_json    JSONB,
     pipeline_id      VARCHAR(20),
     created_by       VARCHAR(20)   NOT NULL,
     updated_by       VARCHAR(20),
@@ -579,6 +580,7 @@ COMMENT ON COLUMN t_knowledge_document.schedule_enabled IS '是否启用定时�
 COMMENT ON COLUMN t_knowledge_document.schedule_cron IS '定时表达式';
 COMMENT ON COLUMN t_knowledge_document.chunk_strategy IS '分块策略';
 COMMENT ON COLUMN t_knowledge_document.chunk_config IS '分块配置JSON';
+COMMENT ON COLUMN t_knowledge_document.metadata_json IS '面向检索的业务元数据JSON';
 COMMENT ON COLUMN t_knowledge_document.pipeline_id IS 'Pipeline ID';
 COMMENT ON COLUMN t_knowledge_document.created_by IS '创建人';
 COMMENT ON COLUMN t_knowledge_document.updated_by IS '修改人';

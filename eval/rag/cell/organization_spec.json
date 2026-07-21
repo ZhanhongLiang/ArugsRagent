@@ -1,0 +1,43 @@
+{
+  "ELECTRODE": {
+    "name": "电芯前段极片制造车间",
+    "teams": {
+      "ELECTRODE-MIX": "配料搅拌班",
+      "ELECTRODE-COAT": "涂布烘干班",
+      "ELECTRODE-CALENDER": "辊压班",
+      "ELECTRODE-SLIT": "分切模切班"
+    }
+  },
+  "ASSEMBLY": {
+    "name": "电芯中段装配车间",
+    "teams": {
+      "ASSEMBLY-WIND": "卷绕班",
+      "ASSEMBLY-STACK": "叠片班",
+      "ASSEMBLY-WELD": "极耳焊接班",
+      "ASSEMBLY-PACK": "入壳封装班"
+    }
+  },
+  "FORMATION": {
+    "name": "电芯后段注液化成车间",
+    "teams": {
+      "FORMATION-BAKE": "烘烤注液班",
+      "FORMATION-FILL": "注液浸润班",
+      "FORMATION-FORM": "化成 Degassing 班",
+      "FORMATION-GRADE": "老化分容班"
+    }
+  },
+  "QUALITY": {
+    "name": "质量检测中心",
+    "teams": {
+      "QUALITY-IPQC": "过程质量班",
+      "QUALITY-FQC": "终检可靠性班"
+    }
+  },
+  "UTILITY": {
+    "name": "公辅动力车间",
+    "teams": {
+      "UTILITY-DRYROOM": "干燥房真空班",
+      "UTILITY-POWER": "气体冷却自动化班"
+    }
+  }
+}

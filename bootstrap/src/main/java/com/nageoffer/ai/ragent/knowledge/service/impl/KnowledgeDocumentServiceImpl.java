@@ -75,6 +75,7 @@ import com.nageoffer.ai.ragent.knowledge.schedule.CronScheduleHelper;
 import com.nageoffer.ai.ragent.knowledge.service.KnowledgeChunkService;
 import com.nageoffer.ai.ragent.knowledge.service.KnowledgeDocumentScheduleService;
 import com.nageoffer.ai.ragent.knowledge.service.KnowledgeDocumentService;
+import com.nageoffer.ai.ragent.knowledge.service.support.DocumentVectorMetadataSupport;
 import com.nageoffer.ai.ragent.rag.core.vector.VectorSpaceId;
 import com.nageoffer.ai.ragent.rag.core.vector.VectorStoreService;
 import com.nageoffer.ai.ragent.rag.dto.StoredFileDTO;
@@ -132,6 +133,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
     private final KnowledgeChunkService knowledgeChunkService;
     /** 解析文档分块 JSON 配置。 */
     private final ObjectMapper objectMapper;
+    private final DocumentVectorMetadataSupport documentVectorMetadataSupport;
     /** 为启用定时同步的 URL 文档创建或更新调度记录。 */
     private final KnowledgeDocumentScheduleService scheduleService;
     /** 加载用户配置的摄取流水线定义。 */
@@ -196,6 +198,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
                 .processMode(modeConfig.processMode().getValue())
                 .chunkStrategy(modeConfig.chunkingMode() != null ? modeConfig.chunkingMode().getValue() : null)
                 .chunkConfig(modeConfig.chunkConfig())
+                .metadataJson(documentVectorMetadataSupport.normalize(requestParam.getMetadataJson()))
                 .pipelineId(modeConfig.pipelineId())
                 .createdBy(UserContext.getUsername())
                 .updatedBy(UserContext.getUsername())
@@ -351,6 +354,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
                 embedDuration = result.embedDuration();
                 chunkResults = result.chunks();
             }
+            documentVectorMetadataSupport.attach(documentDO.getMetadataJson(), chunkResults);
             // 将业务 Chunk、向量和文档状态作为一次逻辑重建统一提交。
             long persistStart = System.currentTimeMillis();
             String collectionName = resolveCollectionName(documentDO.getKbId());
@@ -638,15 +642,20 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
             throw new ClientException("文档正在分块中，无法修改");
         }
 
-        String docName = requestParam == null ? null : requestParam.getDocName();
-        if (!StringUtils.hasText(docName)) {
-            throw new ClientException("文档名称不能为空");
+        if (requestParam == null) {
+            throw new ClientException("更新请求不能为空");
         }
 
         LambdaUpdateWrapper<KnowledgeDocumentDO> updateWrapper = Wrappers.lambdaUpdate(KnowledgeDocumentDO.class)
                 .eq(KnowledgeDocumentDO::getId, documentDO.getId())
-                .set(KnowledgeDocumentDO::getDocName, docName.trim())
                 .set(KnowledgeDocumentDO::getUpdatedBy, UserContext.getUsername());
+        if (StringUtils.hasText(requestParam.getDocName())) {
+            updateWrapper.set(KnowledgeDocumentDO::getDocName, requestParam.getDocName().trim());
+        }
+        if (requestParam.getMetadataJson() != null) {
+            updateWrapper.setSql("metadata_json = CAST({0} AS jsonb)",
+                    documentVectorMetadataSupport.normalize(requestParam.getMetadataJson()));
+        }
 
         // processMode 非空时才修改处理配置，允许单独改名称或调度信息。
         if (StringUtils.hasText(requestParam.getProcessMode())) {
@@ -868,6 +877,7 @@ public class KnowledgeDocumentServiceImpl implements KnowledgeDocumentService {
                             .index(each.getChunkIndex())
                             .build()
             ).toList();
+            documentVectorMetadataSupport.attach(documentDO.getMetadataJson(), vectorChunks);
             if (CollUtil.isEmpty(vectorChunks)) {
                 log.warn("启用文档时未找到任何 Chunk，跳过向量重建，docId={}", docId);
                 return;

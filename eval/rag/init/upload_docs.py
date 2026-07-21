@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import time
 from pathlib import Path
 
@@ -56,6 +57,7 @@ def main():
             "processMode": "chunk",
             "chunkStrategy": "structure_aware",
             "chunkConfig": CHUNK_CONFIG,
+            "metadataJson": json.dumps(meta.get("metadata", {}), ensure_ascii=False),
         })
         ragent_doc_id = data["id"] if isinstance(data, dict) else data
         client.post_json(f"/knowledge-base/docs/{ragent_doc_id}/chunk", {})

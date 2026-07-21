@@ -82,6 +82,7 @@ public class PgRetrieverService implements RetrieverService {
             sql.append(" AND metadata->>'doc_id' IN (").append(placeholders).append(')');
             parameters.addAll(accessScope.readableDocumentIds());
         }
+        MetadataFilterSupport.appendPgConditions(sql, parameters, request.getMetadataFilters());
         sql.append(" ORDER BY embedding <=> ?::vector LIMIT ?");
         parameters.add(vectorLiteral);
         parameters.add(request.getTopK());

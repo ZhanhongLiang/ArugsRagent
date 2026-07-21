@@ -1,0 +1,42 @@
+[
+  {
+    "id": "2078724123307118592",
+    "name": "设备维修与备件库",
+    "embeddingModel": "qwen-emb-8b",
+    "collectionName": "kb-equipment-repair",
+    "documentCount": 15,
+    "createdBy": "admin",
+    "createTime": "2026-07-19T06:10:26.480+00:00",
+    "updateTime": "2026-07-19T06:10:26.480+00:00"
+  },
+  {
+    "id": "2078724123017711616",
+    "name": "设备点检保养库",
+    "embeddingModel": "qwen-emb-8b",
+    "collectionName": "kb-equipment-maintenance",
+    "documentCount": 15,
+    "createdBy": "admin",
+    "createTime": "2026-07-19T06:10:26.411+00:00",
+    "updateTime": "2026-07-19T06:10:26.411+00:00"
+  },
+  {
+    "id": "2078724122795413504",
+    "name": "设备故障诊断库",
+    "embeddingModel": "qwen-emb-8b",
+    "collectionName": "kb-equipment-faults",
+    "documentCount": 15,
+    "createdBy": "admin",
+    "createTime": "2026-07-19T06:10:26.358+00:00",
+    "updateTime": "2026-07-19T06:10:26.358+00:00"
+  },
+  {
+    "id": "2078724122266931200",
+    "name": "设备型号与参数库",
+    "embeddingModel": "qwen-emb-8b",
+    "collectionName": "kb-equipment-models",
+    "documentCount": 15,
+    "createdBy": "admin",
+    "createTime": "2026-07-19T06:10:26.234+00:00",
+    "updateTime": "2026-07-19T06:10:26.234+00:00"
+  }
+]

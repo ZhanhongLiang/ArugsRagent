@@ -1,0 +1,200 @@
+{
+  "CELL-06": {
+    "ragent_doc_id": "2079222528609460224",
+    "kb_key": "assembly_fault",
+    "kb_id": "2079222475509571584",
+    "rel_path": "knowledge_base/assembly_fault/CELL-06-卷绕极片跑偏与张力不稳故障案例.md"
+  },
+  "CELL-07": {
+    "ragent_doc_id": "2079222533747482624",
+    "kb_key": "assembly_fault",
+    "kb_id": "2079222475509571584",
+    "rel_path": "knowledge_base/assembly_fault/CELL-07-极耳超声焊虚焊与炸焊故障案例.md"
+  },
+  "CELL-08": {
+    "ragent_doc_id": "2079222535597170688",
+    "kb_key": "assembly_fault",
+    "kb_id": "2079222475509571584",
+    "rel_path": "knowledge_base/assembly_fault/CELL-08-顶封侧封不良与短路测试异常案例.md"
+  },
+  "CELL-24": {
+    "ragent_doc_id": "2079222537593659392",
+    "kb_key": "automation_software",
+    "kb_id": "2079222478479138816",
+    "rel_path": "knowledge_base/automation_software/CELL-24-PLC I/O 工业网络与 MES 接口说明.md"
+  },
+  "CELL-25": {
+    "ragent_doc_id": "2079222539426570240",
+    "kb_key": "automation_software",
+    "kb_id": "2079222478479138816",
+    "rel_path": "knowledge_base/automation_software/CELL-25-卷绕伺服视觉与 HMI 备份恢复说明.md"
+  },
+  "CELL-26": {
+    "ragent_doc_id": "2079222541309812736",
+    "kb_key": "ehs_emergency",
+    "kb_id": "2079222478969872384",
+    "rel_path": "knowledge_base/ehs_emergency/CELL-26-电解液溶剂泄漏与热失控应急处置.md"
+  },
+  "CELL-27": {
+    "ragent_doc_id": "2079222543151112192",
+    "kb_key": "ehs_emergency",
+    "kb_id": "2079222478969872384",
+    "rel_path": "knowledge_base/ehs_emergency/CELL-27-高压 LOTO 真空压力与消防疏散规程.md"
+  },
+  "CELL-04": {
+    "ragent_doc_id": "2079222544971440128",
+    "kb_key": "electrode_fault",
+    "kb_id": "2079222474951729152",
+    "rel_path": "knowledge_base/electrode_fault/CELL-04-涂布条纹与供料压力波动故障案例.md"
+  },
+  "CELL-05": {
+    "ragent_doc_id": "2079222546649161728",
+    "kb_key": "electrode_fault",
+    "kb_id": "2079222474951729152",
+    "rel_path": "knowledge_base/electrode_fault/CELL-05-分切毛刺粉尘与张力跑偏故障案例.md"
+  },
+  "CELL-01": {
+    "ragent_doc_id": "2079222548540792832",
+    "kb_key": "equipment_manual",
+    "kb_id": "2079222473777324032",
+    "rel_path": "knowledge_base/equipment_manual/CELL-01-前段设备操作与报警手册.md"
+  },
+  "CELL-02": {
+    "ragent_doc_id": "2079222550277234688",
+    "kb_key": "equipment_manual",
+    "kb_id": "2079222473777324032",
+    "rel_path": "knowledge_base/equipment_manual/CELL-02-卷绕机操作、参数与联锁手册.md"
+  },
+  "CELL-03": {
+    "ragent_doc_id": "2079222552047230976",
+    "kb_key": "equipment_manual",
+    "kb_id": "2079222473777324032",
+    "rel_path": "knowledge_base/equipment_manual/CELL-03-注液机真空系统与操作手册.md"
+  },
+  "CELL-31": {
+    "ragent_doc_id": "2079222553842393088",
+    "kb_key": "equipment_manual",
+    "kb_id": "2079222473777324032",
+    "rel_path": "knowledge_base/equipment_manual/CELL-31-OCV IR 泄漏与绝缘检测设备操作手册.md"
+  },
+  "CELL-09": {
+    "ragent_doc_id": "2079222555687886848",
+    "kb_key": "formation_fault",
+    "kb_id": "2079222475958362112",
+    "rel_path": "knowledge_base/formation_fault/CELL-09-真空烘烤残水与温度异常故障案例.md"
+  },
+  "CELL-10": {
+    "ragent_doc_id": "2079222557734707200",
+    "kb_key": "formation_fault",
+    "kb_id": "2079222475958362112",
+    "rel_path": "knowledge_base/formation_fault/CELL-10-注液量不足与真空残气故障案例.md"
+  },
+  "CELL-11": {
+    "ragent_doc_id": "2079222559743778816",
+    "kb_key": "formation_fault",
+    "kb_id": "2079222475958362112",
+    "rel_path": "knowledge_base/formation_fault/CELL-11-化成通道温控与 Degassing 异常案例.md"
+  },
+  "CELL-12": {
+    "ragent_doc_id": "2079222561769627648",
+    "kb_key": "formation_fault",
+    "kb_id": "2079222475958362112",
+    "rel_path": "knowledge_base/formation_fault/CELL-12-老化分容 OCV 内阻异常案例.md"
+  },
+  "CELL-15": {
+    "ragent_doc_id": "2079222564361707520",
+    "kb_key": "maintenance_standard",
+    "kb_id": "2079222476998549504",
+    "rel_path": "knowledge_base/maintenance_standard/CELL-15-前段设备点检保养与维修验收标准.md"
+  },
+  "CELL-16": {
+    "ragent_doc_id": "2079222566983147520",
+    "kb_key": "maintenance_standard",
+    "kb_id": "2079222476998549504",
+    "rel_path": "knowledge_base/maintenance_standard/CELL-16-中段卷绕封装点检保养与维修验收标准.md"
+  },
+  "CELL-17": {
+    "ragent_doc_id": "2079222568677646336",
+    "kb_key": "maintenance_standard",
+    "kb_id": "2079222476998549504",
+    "rel_path": "knowledge_base/maintenance_standard/CELL-17-后段化成分容点检保养与 LOTO 标准.md"
+  },
+  "CELL-32": {
+    "ragent_doc_id": "2079222570447642624",
+    "kb_key": "maintenance_standard",
+    "kb_id": "2079222476998549504",
+    "rel_path": "knowledge_base/maintenance_standard/CELL-32-公辅干燥房真空系统保养与应急维修标准.md"
+  },
+  "CELL-18": {
+    "ragent_doc_id": "2079222572133752832",
+    "kb_key": "process_standard",
+    "kb_id": "2079222477543809024",
+    "rel_path": "knowledge_base/process_standard/CELL-18-涂布辊压工艺窗口与换型 SOP.md"
+  },
+  "CELL-19": {
+    "ragent_doc_id": "2079222573769531392",
+    "kb_key": "process_standard",
+    "kb_id": "2079222477543809024",
+    "rel_path": "knowledge_base/process_standard/CELL-19-卷绕张力与纠偏受控作业标准.md"
+  },
+  "CELL-20": {
+    "ragent_doc_id": "2079222575493390336",
+    "kb_key": "process_standard",
+    "kb_id": "2079222477543809024",
+    "rel_path": "knowledge_base/process_standard/CELL-20-注液化成制度与放行标准.md"
+  },
+  "CELL-33": {
+    "ragent_doc_id": "2079222577154334720",
+    "kb_key": "process_standard",
+    "kb_id": "2079222477543809024",
+    "rel_path": "knowledge_base/process_standard/CELL-33-终检抽样判定与不良品隔离标准.md"
+  },
+  "CELL-21": {
+    "ragent_doc_id": "2079222578962079744",
+    "kb_key": "quality_root_cause",
+    "kb_id": "2079222478009376768",
+    "rel_path": "knowledge_base/quality_root_cause/CELL-21-极片厚度面密度与掉粉根因矩阵.md"
+  },
+  "CELL-22": {
+    "ragent_doc_id": "2079222580564303872",
+    "kb_key": "quality_root_cause",
+    "kb_id": "2079222478009376768",
+    "rel_path": "knowledge_base/quality_root_cause/CELL-22-卷芯错位 Overhang 与焊接缺陷根因矩阵.md"
+  },
+  "CELL-23": {
+    "ragent_doc_id": "2079222582183305216",
+    "kb_key": "quality_root_cause",
+    "kb_id": "2079222478009376768",
+    "rel_path": "knowledge_base/quality_root_cause/CELL-23-OCV 内阻容量泄漏与终检缺陷根因矩阵.md"
+  },
+  "CELL-28": {
+    "ragent_doc_id": "2079222583957495808",
+    "kb_key": "spare_tooling",
+    "kb_id": "2079222479527714816",
+    "rel_path": "knowledge_base/spare_tooling/CELL-28-卷绕机张力系统备件与工装治具清单.md"
+  },
+  "CELL-29": {
+    "ragent_doc_id": "2079222585639411712",
+    "kb_key": "spare_tooling",
+    "kb_id": "2079222479527714816",
+    "rel_path": "knowledge_base/spare_tooling/CELL-29-注液阀真空密封件与工装治具清单.md"
+  },
+  "CELL-30": {
+    "ragent_doc_id": "2079222587241635840",
+    "kb_key": "spare_tooling",
+    "kb_id": "2079222479527714816",
+    "rel_path": "knowledge_base/spare_tooling/CELL-30-干燥房真空系统易损件与备件清单.md"
+  },
+  "CELL-13": {
+    "ragent_doc_id": "2079222588755779584",
+    "kb_key": "utility_fault",
+    "kb_id": "2079222476465872896",
+    "rel_path": "knowledge_base/utility_fault/CELL-13-干燥房露点与真空系统异常案例.md"
+  },
+  "CELL-14": {
+    "ragent_doc_id": "2079222590257340416",
+    "kb_key": "utility_fault",
+    "kb_id": "2079222476465872896",
+    "rel_path": "knowledge_base/utility_fault/CELL-14-CDA 氮气冷却水与 PLC 通讯异常案例.md"
+  }
+}

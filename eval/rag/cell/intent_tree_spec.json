@@ -1,0 +1,1324 @@
+{
+  "domains": {
+    "CELL_FAULT_DIAGNOSIS": {
+      "name": "设备故障诊断",
+      "kind": 0,
+      "description": "静态故障案例、诊断和处置知识"
+    },
+    "CELL_EQUIPMENT_OPERATION": {
+      "name": "设备资料与操作",
+      "kind": 0,
+      "description": "设备手册、操作、参数与自动化资料"
+    },
+    "CELL_MAINTENANCE_REPAIR": {
+      "name": "点检、保养与维修",
+      "kind": 0,
+      "description": "TPM、预防保养、维修与备件知识"
+    },
+    "CELL_PROCESS_QUALITY": {
+      "name": "工艺与质量问题",
+      "kind": 0,
+      "description": "工艺标准、质量缺陷和根因追溯"
+    },
+    "CELL_EHS_EMERGENCY": {
+      "name": "安全、EHS 与应急处置",
+      "kind": 0,
+      "description": "安全规程、危化品和应急响应"
+    },
+    "CELL_REALTIME_OPERATIONS": {
+      "name": "实时生产与运维数据",
+      "kind": 2,
+      "description": "仅路由实时数据 MCP 工具"
+    },
+    "CELL_SYSTEM_INTERACTION": {
+      "name": "系统交互与人工升级",
+      "kind": 1,
+      "description": "澄清、升级与会话兜底"
+    }
+  },
+  "categories": {
+    "CELL_FAULT_ELECTRODE": {
+      "parent": "CELL_FAULT_DIAGNOSIS",
+      "name": "前段极片制造故障",
+      "kind": 0
+    },
+    "CELL_FAULT_ASSEMBLY": {
+      "parent": "CELL_FAULT_DIAGNOSIS",
+      "name": "中段装配故障",
+      "kind": 0
+    },
+    "CELL_FAULT_FORMATION": {
+      "parent": "CELL_FAULT_DIAGNOSIS",
+      "name": "后段注液化成故障",
+      "kind": 0
+    },
+    "CELL_FAULT_UTILITY": {
+      "parent": "CELL_FAULT_DIAGNOSIS",
+      "name": "公辅、环境与自动化故障",
+      "kind": 0
+    },
+    "CELL_OPERATION_MANUAL": {
+      "parent": "CELL_EQUIPMENT_OPERATION",
+      "name": "设备手册、操作与报警",
+      "kind": 0
+    },
+    "CELL_OPERATION_ELECTRODE": {
+      "parent": "CELL_EQUIPMENT_OPERATION",
+      "name": "前段设备操作",
+      "kind": 0
+    },
+    "CELL_OPERATION_ASSEMBLY": {
+      "parent": "CELL_EQUIPMENT_OPERATION",
+      "name": "中段设备操作",
+      "kind": 0
+    },
+    "CELL_OPERATION_FORMATION": {
+      "parent": "CELL_EQUIPMENT_OPERATION",
+      "name": "后段与检测设备操作",
+      "kind": 0
+    },
+    "CELL_OPERATION_UTILITY": {
+      "parent": "CELL_EQUIPMENT_OPERATION",
+      "name": "公辅设备操作",
+      "kind": 0
+    },
+    "CELL_OPERATION_AUTOMATION": {
+      "parent": "CELL_EQUIPMENT_OPERATION",
+      "name": "电气、自动化与软件",
+      "kind": 0
+    },
+    "CELL_MAINTENANCE_STANDARD": {
+      "parent": "CELL_MAINTENANCE_REPAIR",
+      "name": "点检保养维修标准",
+      "kind": 0
+    },
+    "CELL_MAINTENANCE_ELECTRODE": {
+      "parent": "CELL_MAINTENANCE_REPAIR",
+      "name": "前段设备保养",
+      "kind": 0
+    },
+    "CELL_MAINTENANCE_ASSEMBLY": {
+      "parent": "CELL_MAINTENANCE_REPAIR",
+      "name": "中段设备保养",
+      "kind": 0
+    },
+    "CELL_MAINTENANCE_FORMATION": {
+      "parent": "CELL_MAINTENANCE_REPAIR",
+      "name": "后段与公辅设备保养",
+      "kind": 0
+    },
+    "CELL_MAINTENANCE_SPARE": {
+      "parent": "CELL_MAINTENANCE_REPAIR",
+      "name": "备件、易损件与工装",
+      "kind": 0
+    },
+    "CELL_QUALITY_ELECTRODE": {
+      "parent": "CELL_PROCESS_QUALITY",
+      "name": "极片工艺与质量",
+      "kind": 0
+    },
+    "CELL_QUALITY_ASSEMBLY": {
+      "parent": "CELL_PROCESS_QUALITY",
+      "name": "装配工艺与质量",
+      "kind": 0
+    },
+    "CELL_QUALITY_FORMATION": {
+      "parent": "CELL_PROCESS_QUALITY",
+      "name": "注液化成与终检质量",
+      "kind": 0
+    },
+    "CELL_QUALITY_TRACEABILITY": {
+      "parent": "CELL_PROCESS_QUALITY",
+      "name": "质量追溯与统计过程控制",
+      "kind": 0
+    },
+    "CELL_PROCESS_GOVERNANCE": {
+      "parent": "CELL_PROCESS_QUALITY",
+      "name": "工艺变更与偏差管理",
+      "kind": 0
+    },
+    "CELL_EHS_CHEMICAL": {
+      "parent": "CELL_EHS_EMERGENCY",
+      "name": "危化品与热失控",
+      "kind": 0
+    },
+    "CELL_EHS_EQUIPMENT": {
+      "parent": "CELL_EHS_EMERGENCY",
+      "name": "设备安全与应急响应",
+      "kind": 0
+    },
+    "CELL_EHS_SITE": {
+      "parent": "CELL_EHS_EMERGENCY",
+      "name": "现场作业与废弃物安全",
+      "kind": 0
+    },
+    "CELL_MCP_DEVICE": {
+      "parent": "CELL_REALTIME_OPERATIONS",
+      "name": "设备、报警与工单实时查询",
+      "kind": 2
+    },
+    "CELL_MCP_MATERIAL": {
+      "parent": "CELL_REALTIME_OPERATIONS",
+      "name": "备件与保养实时查询",
+      "kind": 2
+    },
+    "CELL_SYSTEM_SUPPORT": {
+      "parent": "CELL_SYSTEM_INTERACTION",
+      "name": "澄清、升级与反馈",
+      "kind": 1
+    }
+  },
+  "intents": [
+    {
+      "code": "CELL_FAULT_ELECTRODE_MIX_DISPERSION",
+      "name": "配料搅拌分散异常",
+      "parent": "CELL_FAULT_ELECTRODE",
+      "kind": 0,
+      "kb_key": "electrode_fault",
+      "description": "处理浆料分散、粘度、搅拌扭矩相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "配料搅拌分散异常怎么排查？",
+        "浆料分散、粘度、搅拌扭矩报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ELECTRODE_VACUUM_FILTER",
+      "name": "脱泡与过滤异常",
+      "parent": "CELL_FAULT_ELECTRODE",
+      "kind": 0,
+      "kb_key": "electrode_fault",
+      "description": "处理真空脱泡、过滤压差、气泡相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "脱泡与过滤异常怎么排查？",
+        "真空脱泡、过滤压差、气泡报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ELECTRODE_COATING_FEED",
+      "name": "涂布供料与涂布头异常",
+      "parent": "CELL_FAULT_ELECTRODE",
+      "kind": 0,
+      "kb_key": "electrode_fault",
+      "description": "处理供料压力、涂布头、条纹相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "涂布供料与涂布头异常怎么排查？",
+        "供料压力、涂布头、条纹报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ELECTRODE_COATING_OVEN",
+      "name": "涂布烘箱温控异常",
+      "parent": "CELL_FAULT_ELECTRODE",
+      "kind": 0,
+      "kb_key": "electrode_fault",
+      "description": "处理烘箱温度、风量、干燥相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "涂布烘箱温控异常怎么排查？",
+        "烘箱温度、风量、干燥报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ELECTRODE_CALENDER",
+      "name": "辊压压力间隙温度异常",
+      "parent": "CELL_FAULT_ELECTRODE",
+      "kind": 0,
+      "kb_key": "electrode_fault",
+      "description": "处理辊压压力、间隙、温度相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "辊压压力间隙温度异常怎么排查？",
+        "辊压压力、间隙、温度报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ELECTRODE_SLITTING",
+      "name": "分切毛刺粉尘刀具异常",
+      "parent": "CELL_FAULT_ELECTRODE",
+      "kind": 0,
+      "kb_key": "electrode_fault",
+      "description": "处理分切毛刺、刀具、粉尘相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "分切毛刺粉尘刀具异常怎么排查？",
+        "分切毛刺、刀具、粉尘报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ELECTRODE_WEB_TENSION",
+      "name": "收放卷张力与纠偏异常",
+      "parent": "CELL_FAULT_ELECTRODE",
+      "kind": 0,
+      "kb_key": "electrode_fault",
+      "description": "处理张力、EPC、跑偏、收放卷相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "收放卷张力与纠偏异常怎么排查？",
+        "张力、EPC、跑偏、收放卷报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ASSEMBLY_WIND_TENSION",
+      "name": "卷绕张力与纠偏异常",
+      "parent": "CELL_FAULT_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "assembly_fault",
+      "description": "处理卷绕张力、极片跑偏、隔膜纠偏、EPC相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "卷绕张力与纠偏异常怎么排查？",
+        "卷绕张力、极片跑偏、隔膜纠偏、EPC报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ASSEMBLY_WIND_DIMENSION",
+      "name": "卷芯尺寸与变形异常",
+      "parent": "CELL_FAULT_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "assembly_fault",
+      "description": "处理卷芯直径、过松过紧、变形相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "卷芯尺寸与变形异常怎么排查？",
+        "卷芯直径、过松过紧、变形报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ASSEMBLY_STACK_ALIGNMENT",
+      "name": "叠片对位与吸附异常",
+      "parent": "CELL_FAULT_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "assembly_fault",
+      "description": "处理叠片、对位、吸附、极片错位相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "叠片对位与吸附异常怎么排查？",
+        "叠片、对位、吸附、极片错位报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ASSEMBLY_TAB_FORMING",
+      "name": "极耳成形与贴胶异常",
+      "parent": "CELL_FAULT_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "assembly_fault",
+      "description": "处理极耳成形、折弯、贴胶相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "极耳成形与贴胶异常怎么排查？",
+        "极耳成形、折弯、贴胶报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ASSEMBLY_ULTRASONIC_WELD",
+      "name": "超声焊接异常",
+      "parent": "CELL_FAULT_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "assembly_fault",
+      "description": "处理虚焊、炸焊、焊接能量相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "超声焊接异常怎么排查？",
+        "虚焊、炸焊、焊接能量报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ASSEMBLY_LASER_WELD",
+      "name": "激光焊接异常",
+      "parent": "CELL_FAULT_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "assembly_fault",
+      "description": "处理激光焊、焊穿、飞溅相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "激光焊接异常怎么排查？",
+        "激光焊、焊穿、飞溅报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ASSEMBLY_SEALING",
+      "name": "入壳与顶侧封异常",
+      "parent": "CELL_FAULT_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "assembly_fault",
+      "description": "处理入壳、顶封、侧封、封装相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "入壳与顶侧封异常怎么排查？",
+        "入壳、顶封、侧封、封装报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_ASSEMBLY_SHORT_XRAY",
+      "name": "短路测试与 X-Ray 异常",
+      "parent": "CELL_FAULT_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "assembly_fault",
+      "description": "处理短路、Hi-pot、X-Ray相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "短路测试与 X-Ray 异常怎么排查？",
+        "短路、Hi-pot、X-Ray报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_FORMATION_BAKE_VACUUM",
+      "name": "烘烤温度与真空异常",
+      "parent": "CELL_FAULT_FORMATION",
+      "kind": 0,
+      "kb_key": "formation_fault",
+      "description": "处理真空烘烤、温度、残水相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "烘烤温度与真空异常怎么排查？",
+        "真空烘烤、温度、残水报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_FORMATION_FILL_QUANTITY",
+      "name": "注液量与称重异常",
+      "parent": "CELL_FAULT_FORMATION",
+      "kind": 0,
+      "kb_key": "formation_fault",
+      "description": "处理注液量、称重、计量相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "注液量与称重异常怎么排查？",
+        "注液量、称重、计量报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_FORMATION_FILL_VACUUM",
+      "name": "注液真空与残气异常",
+      "parent": "CELL_FAULT_FORMATION",
+      "kind": 0,
+      "kb_key": "formation_fault",
+      "description": "处理注液真空、残气、密封相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "注液真空与残气异常怎么排查？",
+        "注液真空、残气、密封报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_FORMATION_WETTING",
+      "name": "浸润时间异常",
+      "parent": "CELL_FAULT_FORMATION",
+      "kind": 0,
+      "kb_key": "formation_fault",
+      "description": "处理浸润、静置、吸液相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "浸润时间异常怎么排查？",
+        "浸润、静置、吸液报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_FORMATION_FORMATION_CHANNEL",
+      "name": "化成通道与电源异常",
+      "parent": "CELL_FAULT_FORMATION",
+      "kind": 0,
+      "kb_key": "formation_fault",
+      "description": "处理化成通道、电源、接触相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "化成通道与电源异常怎么排查？",
+        "化成通道、电源、接触报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_FORMATION_FORMATION_THERMAL",
+      "name": "化成温控与夹具异常",
+      "parent": "CELL_FAULT_FORMATION",
+      "kind": 0,
+      "kb_key": "formation_fault",
+      "description": "处理化成温度、夹具、热管理相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "化成温控与夹具异常怎么排查？",
+        "化成温度、夹具、热管理报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_FORMATION_DEGASSING",
+      "name": "Degassing 与二封异常",
+      "parent": "CELL_FAULT_FORMATION",
+      "kind": 0,
+      "kb_key": "formation_fault",
+      "description": "处理排气、Degassing、二封相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "Degassing 与二封异常怎么排查？",
+        "排气、Degassing、二封报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_FORMATION_AGING_GRADING",
+      "name": "老化分容与 OCV/IR 异常",
+      "parent": "CELL_FAULT_FORMATION",
+      "kind": 0,
+      "kb_key": "formation_fault",
+      "description": "处理老化、分容、OCV、内阻、自放电相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "老化分容与 OCV/IR 异常怎么排查？",
+        "老化、分容、OCV、内阻、自放电报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_UTILITY_DRYROOM_DEW",
+      "name": "干燥房露点异常",
+      "parent": "CELL_FAULT_UTILITY",
+      "kind": 0,
+      "kb_key": "utility_fault",
+      "description": "处理露点、除湿、干燥房相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "干燥房露点异常怎么排查？",
+        "露点、除湿、干燥房报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_UTILITY_VACUUM",
+      "name": "真空系统异常",
+      "parent": "CELL_FAULT_UTILITY",
+      "kind": 0,
+      "kb_key": "utility_fault",
+      "description": "处理真空泵、管网、泄漏相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "真空系统异常怎么排查？",
+        "真空泵、管网、泄漏报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_UTILITY_CDA_NITROGEN",
+      "name": "CDA 与氮气系统异常",
+      "parent": "CELL_FAULT_UTILITY",
+      "kind": 0,
+      "kb_key": "utility_fault",
+      "description": "处理压缩空气、氮气、压力相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "CDA 与氮气系统异常怎么排查？",
+        "压缩空气、氮气、压力报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_UTILITY_COOLING",
+      "name": "冷却水与冷水机异常",
+      "parent": "CELL_FAULT_UTILITY",
+      "kind": 0,
+      "kb_key": "utility_fault",
+      "description": "处理冷却水、冷水机、流量相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "冷却水与冷水机异常怎么排查？",
+        "冷却水、冷水机、流量报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_UTILITY_EXHAUST_RECOVERY",
+      "name": "排风除尘与溶剂回收异常",
+      "parent": "CELL_FAULT_UTILITY",
+      "kind": 0,
+      "kb_key": "utility_fault",
+      "description": "处理排风、除尘、溶剂回收相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "排风除尘与溶剂回收异常怎么排查？",
+        "排风、除尘、溶剂回收报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_UTILITY_PLC_IO",
+      "name": "PLC、I/O 与现场总线异常",
+      "parent": "CELL_FAULT_UTILITY",
+      "kind": 0,
+      "kb_key": "utility_fault",
+      "description": "处理PLC、I/O、Profinet、EtherCAT相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "PLC、I/O 与现场总线异常怎么排查？",
+        "PLC、I/O、Profinet、EtherCAT报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_UTILITY_MOTION_VISION",
+      "name": "伺服、机器人与视觉定位异常",
+      "parent": "CELL_FAULT_UTILITY",
+      "kind": 0,
+      "kb_key": "utility_fault",
+      "description": "处理伺服、机器人、视觉定位相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "伺服、机器人与视觉定位异常怎么排查？",
+        "伺服、机器人、视觉定位报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_FAULT_UTILITY_MES_INTERFACE",
+      "name": "MES 通信与配方下发异常",
+      "parent": "CELL_FAULT_UTILITY",
+      "kind": 0,
+      "kb_key": "utility_fault",
+      "description": "处理MES、接口、配方下发相关的设备故障现象、原因排查、安全边界、修复和复验。",
+      "examples": [
+        "MES 通信与配方下发异常怎么排查？",
+        "MES、接口、配方下发报警后先检查什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_START_STOP",
+      "name": "开停机与联锁说明",
+      "parent": "CELL_OPERATION_MANUAL",
+      "kind": 0,
+      "kb_key": "equipment_manual",
+      "description": "查询设备开停机、复位前置条件和安全联锁。",
+      "examples": [
+        "卷绕机怎么规范开机？",
+        "报警复位前有哪些联锁条件？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_CHANGEOVER",
+      "name": "换型换料与首件确认",
+      "parent": "CELL_OPERATION_MANUAL",
+      "kind": 0,
+      "kb_key": "equipment_manual",
+      "description": "查询换型换料、首件确认和参数切换要求。",
+      "examples": [
+        "卷绕换型要确认哪些项目？",
+        "注液换料怎么做？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_PARAMETER",
+      "name": "参数设置与报警代码",
+      "parent": "CELL_OPERATION_MANUAL",
+      "kind": 0,
+      "kb_key": "equipment_manual",
+      "description": "查询设备参数、报警代码和受控调整边界。",
+      "examples": [
+        "卷绕张力参数怎么查看？",
+        "化成报警代码是什么意思？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_DRAWING",
+      "name": "图纸、气液路与 I/O 查询",
+      "parent": "CELL_OPERATION_MANUAL",
+      "kind": 0,
+      "kb_key": "equipment_manual",
+      "description": "查询机械、电气、气路、液路和 I/O 资料。",
+      "examples": [
+        "注液机真空管路图在哪？",
+        "卷绕机 I/O 表怎么查？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_ELECTRODE_GUIDE",
+      "name": "配料涂布辊压分切操作",
+      "parent": "CELL_OPERATION_ELECTRODE",
+      "kind": 0,
+      "kb_key": "equipment_manual",
+      "description": "查询前段极片设备的规范操作、交接班与异常停机。",
+      "examples": [
+        "涂布机换卷怎么操作？",
+        "辊压机停机后怎么复机？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_ASSEMBLY_GUIDE",
+      "name": "卷绕叠片焊接封装操作",
+      "parent": "CELL_OPERATION_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "equipment_manual",
+      "description": "查询中段卷绕、叠片、焊接和封装设备的操作边界。",
+      "examples": [
+        "卷绕机穿带流程是什么？",
+        "超声焊换治具怎么操作？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_FORMATION_GUIDE",
+      "name": "烘烤注液化成分容操作",
+      "parent": "CELL_OPERATION_FORMATION",
+      "kind": 0,
+      "kb_key": "equipment_manual",
+      "description": "查询后段烘烤、注液、化成、分容及检测设备操作。",
+      "examples": [
+        "化成柜上电前确认什么？",
+        "OCV/IR 测试机开机流程？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_UTILITY_GUIDE",
+      "name": "干燥房真空气体冷却操作",
+      "parent": "CELL_OPERATION_UTILITY",
+      "kind": 0,
+      "kb_key": "equipment_manual",
+      "description": "查询干燥房、真空、气体和冷却系统的运行操作。",
+      "examples": [
+        "干燥房露点异常如何切换？",
+        "冷水机启停注意什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_BACKUP",
+      "name": "软件备份恢复与版本说明",
+      "parent": "CELL_OPERATION_AUTOMATION",
+      "kind": 0,
+      "kb_key": "automation_software",
+      "description": "查询 PLC、HMI、视觉和机器人软件版本与备份恢复。",
+      "examples": [
+        "PLC 程序恢复前要注意什么？",
+        "视觉配方如何备份？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_NETWORK",
+      "name": "工业网络与 MES 接口",
+      "parent": "CELL_OPERATION_AUTOMATION",
+      "kind": 0,
+      "kb_key": "automation_software",
+      "description": "查询工业网络、时间同步和 MES 接口排查方法。",
+      "examples": [
+        "设备为什么连不上 MES？",
+        "现场总线掉站怎么排查？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_SERVO",
+      "name": "伺服运动控制参数说明",
+      "parent": "CELL_OPERATION_AUTOMATION",
+      "kind": 0,
+      "kb_key": "automation_software",
+      "description": "查询伺服、变频器和运动控制的受控参数。",
+      "examples": [
+        "卷绕伺服参数可以怎么调整？",
+        "变频器参数如何备份？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_OPERATION_VISION",
+      "name": "视觉配方与标定说明",
+      "parent": "CELL_OPERATION_AUTOMATION",
+      "kind": 0,
+      "kb_key": "automation_software",
+      "description": "查询视觉定位、配方切换和标定方法。",
+      "examples": [
+        "视觉定位偏移如何标定？",
+        "换型后视觉配方怎么确认？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MAINTENANCE_DAILY",
+      "name": "日周月点检与清洁",
+      "parent": "CELL_MAINTENANCE_STANDARD",
+      "kind": 0,
+      "kb_key": "maintenance_standard",
+      "description": "查询日周月点检、清洁和记录要求。",
+      "examples": [
+        "卷绕机班前点检看什么？",
+        "注液机周保养怎么做？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MAINTENANCE_PREVENTIVE",
+      "name": "预防保养与校准",
+      "parent": "CELL_MAINTENANCE_STANDARD",
+      "kind": 0,
+      "kb_key": "maintenance_standard",
+      "description": "查询润滑、校准、预防性维护和验收要求。",
+      "examples": [
+        "辊压机精度如何校验？",
+        "化成夹具多久校准？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MAINTENANCE_REPAIR_ACCEPTANCE",
+      "name": "维修拆装与复验",
+      "parent": "CELL_MAINTENANCE_STANDARD",
+      "kind": 0,
+      "kb_key": "maintenance_standard",
+      "description": "查询检修拆装、LOTO、复机验证和维修验收。",
+      "examples": [
+        "更换真空泵后如何验收？",
+        "维修后首件验证怎么做？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MAINTENANCE_ELECTRODE_TPM",
+      "name": "前段涂布辊压分切 TPM",
+      "parent": "CELL_MAINTENANCE_ELECTRODE",
+      "kind": 0,
+      "kb_key": "maintenance_standard",
+      "description": "查询前段关键设备的 TPM、润滑、校准与易损件更换。",
+      "examples": [
+        "涂布头怎么保养？",
+        "分切刀具寿命怎么管理？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MAINTENANCE_ASSEMBLY_TPM",
+      "name": "中段卷绕焊接封装 TPM",
+      "parent": "CELL_MAINTENANCE_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "maintenance_standard",
+      "description": "查询卷绕、焊接、封装设备的保养、精度和验收。",
+      "examples": [
+        "卷绕张力系统怎么保养？",
+        "焊头需要怎样点检？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MAINTENANCE_FORMATION_TPM",
+      "name": "后段注液化成分容 TPM",
+      "parent": "CELL_MAINTENANCE_FORMATION",
+      "kind": 0,
+      "kb_key": "maintenance_standard",
+      "description": "查询注液、化成、分容设备的预防维护和安全检修。",
+      "examples": [
+        "注液阀多久保养？",
+        "化成夹具怎样校准？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MAINTENANCE_UTILITY_TPM",
+      "name": "干燥房真空与冷却系统 TPM",
+      "parent": "CELL_MAINTENANCE_FORMATION",
+      "kind": 0,
+      "kb_key": "maintenance_standard",
+      "description": "查询干燥房、真空和冷却系统的维护标准。",
+      "examples": [
+        "真空泵保养周期？",
+        "露点仪怎样校准？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MAINTENANCE_CALIBRATION",
+      "name": "传感器与计量校准",
+      "parent": "CELL_MAINTENANCE_STANDARD",
+      "kind": 0,
+      "kb_key": "maintenance_standard",
+      "description": "查询张力、温度、压力、重量和电性能检测的校准要求。",
+      "examples": [
+        "张力传感器怎样校准？",
+        "注液称重多久校验？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_SPARE_BOM",
+      "name": "设备 BOM 与备件适配",
+      "parent": "CELL_MAINTENANCE_SPARE",
+      "kind": 0,
+      "kb_key": "spare_tooling",
+      "description": "查询设备 BOM、备件规格和可替代关系。",
+      "examples": [
+        "卷绕机张力传感器备件型号？",
+        "注液阀有哪些替代件？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_SPARE_TOOLING",
+      "name": "易损件寿命与工装治具",
+      "parent": "CELL_MAINTENANCE_SPARE",
+      "kind": 0,
+      "kb_key": "spare_tooling",
+      "description": "查询易损件寿命、更换周期和工装治具使用规范。",
+      "examples": [
+        "分切刀多久换？",
+        "化成夹具怎么保养？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_SPARE_CONTROL",
+      "name": "备件领用替代与受控变更",
+      "parent": "CELL_MAINTENANCE_SPARE",
+      "kind": 0,
+      "kb_key": "spare_tooling",
+      "description": "查询备件领用、替代件评审和受控变更要求。",
+      "examples": [
+        "备件能直接用替代型号吗？",
+        "关键备件怎么领用？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_TOOLING_ACCEPTANCE",
+      "name": "工装治具验收与寿命管理",
+      "parent": "CELL_MAINTENANCE_SPARE",
+      "kind": 0,
+      "kb_key": "spare_tooling",
+      "description": "查询工装治具验收、校准和报废标准。",
+      "examples": [
+        "新卷绕治具怎么验收？",
+        "治具寿命到期如何处理？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_COATING",
+      "name": "涂布厚度面密度与外观缺陷",
+      "parent": "CELL_QUALITY_ELECTRODE",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "分析面密度、厚度、条纹、露箔、颗粒和针孔。",
+      "examples": [
+        "涂布条纹通常和什么有关？",
+        "面密度波动怎么追溯？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_ELECTRODE_DAMAGE",
+      "name": "极片掉粉开裂褶皱与毛刺",
+      "parent": "CELL_QUALITY_ELECTRODE",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "分析极片掉粉、开裂、褶皱、毛刺和粉尘根因。",
+      "examples": [
+        "极片掉粉要查设备还是工艺？",
+        "分切毛刺超标怎么查？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_PROCESS_ELECTRODE",
+      "name": "前段工艺窗口与 SOP",
+      "parent": "CELL_QUALITY_ELECTRODE",
+      "kind": 0,
+      "kb_key": "process_standard",
+      "description": "查询配料、涂布、辊压、分切的 SOP 与工艺窗口。",
+      "examples": [
+        "涂布换型工艺确认什么？",
+        "辊压参数变更流程？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_ALIGNMENT",
+      "name": "极片错位与 Overhang 异常",
+      "parent": "CELL_QUALITY_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "分析极片错位、Overhang 和卷芯变形根因。",
+      "examples": [
+        "卷芯 Overhang 偏大怎么追溯？",
+        "极片错位和张力有关吗？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_WELD_SEAL",
+      "name": "焊接与封装不良",
+      "parent": "CELL_QUALITY_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "分析虚焊、炸焊、焊穿、封装不良和内部短路风险。",
+      "examples": [
+        "极耳虚焊的根因有哪些？",
+        "顶封不良怎么判断？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_PROCESS_ASSEMBLY",
+      "name": "中段工艺窗口与 SOP",
+      "parent": "CELL_QUALITY_ASSEMBLY",
+      "kind": 0,
+      "kb_key": "process_standard",
+      "description": "查询卷绕、叠片、焊接和封装的受控作业标准。",
+      "examples": [
+        "卷绕张力切换要走什么流程？",
+        "激光焊参数能直接改吗？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_FILL",
+      "name": "注液量浸润与气胀异常",
+      "parent": "CELL_QUALITY_FORMATION",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "分析注液不足过量、浸润不良和气胀。",
+      "examples": [
+        "注液不足会造成什么后果？",
+        "气胀怎么判断根因？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_ELECTRICAL",
+      "name": "容量内阻 OCV 与自放电异常",
+      "parent": "CELL_QUALITY_FORMATION",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "分析容量偏低、内阻偏高、OCV 和自放电异常。",
+      "examples": [
+        "内阻偏高如何向前段追溯？",
+        "OCV 异常常见原因？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_FINAL",
+      "name": "外观尺寸泄漏与绝缘不良",
+      "parent": "CELL_QUALITY_FORMATION",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "分析终检外观、尺寸、泄漏和绝缘问题。",
+      "examples": [
+        "软包电芯泄漏怎么处理？",
+        "Hi-pot 不良怎么追溯？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_PROCESS_FORMATION",
+      "name": "后段工艺窗口与放行",
+      "parent": "CELL_QUALITY_FORMATION",
+      "kind": 0,
+      "kb_key": "process_standard",
+      "description": "查询注液、化成、老化、分容的工艺窗口和放行规则。",
+      "examples": [
+        "化成制度变更怎么审批？",
+        "分容异常能否放行？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_BATCH_TRACE",
+      "name": "批次追溯与缺陷关联",
+      "parent": "CELL_QUALITY_TRACEABILITY",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "查询缺陷、设备、工艺参数和批次之间的追溯关系。",
+      "examples": [
+        "容量异常怎么追溯到卷绕？",
+        "这个批次受哪些报警影响？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_QUALITY_SPC",
+      "name": "SPC 异常与良率分析",
+      "parent": "CELL_QUALITY_TRACEABILITY",
+      "kind": 0,
+      "kb_key": "quality_root_cause",
+      "description": "分析 SPC 失控、良率波动和量测系统风险。",
+      "examples": [
+        "SPC 连续超限怎么处理？",
+        "良率下降先看哪些数据？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_PROCESS_CHANGE",
+      "name": "工艺变更与版本生效",
+      "parent": "CELL_PROCESS_GOVERNANCE",
+      "kind": 0,
+      "kb_key": "process_standard",
+      "description": "查询工艺变更、版本生效、回退和首件确认要求。",
+      "examples": [
+        "卷绕参数变更怎么走流程？",
+        "旧配方什么时候失效？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_PROCESS_DEVIATION",
+      "name": "工艺偏差与异常放行",
+      "parent": "CELL_PROCESS_GOVERNANCE",
+      "kind": 0,
+      "kb_key": "process_standard",
+      "description": "查询工艺偏差、临时放行和风险评审边界。",
+      "examples": [
+        "设备异常后能临时放行吗？",
+        "偏差单要谁批准？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_EHS_ELECTROLYTE",
+      "name": "电解液与溶剂泄漏处置",
+      "parent": "CELL_EHS_CHEMICAL",
+      "kind": 0,
+      "kb_key": "ehs_emergency",
+      "description": "处理电解液、NMP 等泄漏、隔离、PPE 和升级。",
+      "examples": [
+        "电解液泄漏第一步做什么？",
+        "NMP 泄漏如何处置？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_EHS_THERMAL",
+      "name": "电芯发热冒烟鼓胀与热失控",
+      "parent": "CELL_EHS_CHEMICAL",
+      "kind": 0,
+      "kb_key": "ehs_emergency",
+      "description": "处理异常电芯发热、冒烟、鼓胀和热失控风险。",
+      "examples": [
+        "化成柜电芯冒烟怎么办？",
+        "鼓胀电芯如何隔离？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_EHS_HAZMAT",
+      "name": "危化品 SDS 与废弃物处置",
+      "parent": "CELL_EHS_CHEMICAL",
+      "kind": 0,
+      "kb_key": "ehs_emergency",
+      "description": "查询 SDS、危化品操作和废液废料处置。",
+      "examples": [
+        "电解液 SDS 在哪查？",
+        "不良电芯怎么处置？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_EHS_LOTO",
+      "name": "高压 LOTO 与带能作业禁止",
+      "parent": "CELL_EHS_EQUIPMENT",
+      "kind": 0,
+      "kb_key": "ehs_emergency",
+      "description": "查询高压、真空、压力设备 LOTO 和禁令。",
+      "examples": [
+        "化成柜维修如何 LOTO？",
+        "真空管路可以带压拆吗？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_EHS_DRYROOM",
+      "name": "干燥房、真空与压力安全",
+      "parent": "CELL_EHS_EQUIPMENT",
+      "kind": 0,
+      "kb_key": "ehs_emergency",
+      "description": "查询干燥房、真空和气路的安全要求。",
+      "examples": [
+        "干燥房进入有哪些要求？",
+        "真空泵检修前要做什么？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_EHS_FIRE",
+      "name": "消防疏散与应急升级",
+      "parent": "CELL_EHS_EQUIPMENT",
+      "kind": 0,
+      "kb_key": "ehs_emergency",
+      "description": "查询消防、疏散和 EHS 应急升级流程。",
+      "examples": [
+        "化成区起火如何疏散？",
+        "什么情况必须通知 EHS？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_EHS_PPE",
+      "name": "PPE 与现场作业许可",
+      "parent": "CELL_EHS_SITE",
+      "kind": 0,
+      "kb_key": "ehs_emergency",
+      "description": "查询 PPE、动火、受限空间和现场作业许可要求。",
+      "examples": [
+        "处理电解液要穿什么 PPE？",
+        "维修需要办作业票吗？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_EHS_WASTE",
+      "name": "废液废料与不良电芯处置",
+      "parent": "CELL_EHS_SITE",
+      "kind": 0,
+      "kb_key": "ehs_emergency",
+      "description": "查询废液、废料和异常电芯隔离处置要求。",
+      "examples": [
+        "不良电芯怎么隔离？",
+        "含电解液废料怎么处理？"
+      ],
+      "top_k": 8
+    },
+    {
+      "code": "CELL_MCP_DEVICE_MODEL",
+      "name": "设备型号与适用范围查询",
+      "parent": "CELL_MCP_DEVICE",
+      "kind": 2,
+      "mcp_tool_id": "device_model_query",
+      "description": "查询设备型号、参数和所属组织。",
+      "examples": [
+        "查询卷绕机型号",
+        "装配车间有哪些设备？"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_MCP_DEVICE_STATUS",
+      "name": "设备实时状态查询",
+      "parent": "CELL_MCP_DEVICE",
+      "kind": 2,
+      "mcp_tool_id": "device_status_query",
+      "description": "查询设备当前状态和报警。",
+      "examples": [
+        "3号卷绕机现在什么状态？",
+        "当前报警还在吗？"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_MCP_FAULT_CODE",
+      "name": "实时故障代码查询",
+      "parent": "CELL_MCP_DEVICE",
+      "kind": 2,
+      "mcp_tool_id": "fault_code_query",
+      "description": "查询故障代码的实时字典说明。",
+      "examples": [
+        "报警代码是什么含义？",
+        "这个故障码危险吗？"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_MCP_WORK_ORDER",
+      "name": "维修工单查询",
+      "parent": "CELL_MCP_DEVICE",
+      "kind": 2,
+      "mcp_tool_id": "work_order_query",
+      "description": "查询工单状态、处理人和预计完成时间。",
+      "examples": [
+        "工单谁在处理？",
+        "维修单到哪里了？"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_MCP_SPARE",
+      "name": "备件实时库存查询",
+      "parent": "CELL_MCP_MATERIAL",
+      "kind": 2,
+      "mcp_tool_id": "spare_part_inventory_query",
+      "description": "查询备件库存、库位和替代型号。",
+      "examples": [
+        "这个备件有库存吗？",
+        "张力传感器在哪个库位？"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_MCP_MAINTENANCE",
+      "name": "保养计划查询",
+      "parent": "CELL_MCP_MATERIAL",
+      "kind": 2,
+      "mcp_tool_id": "maintenance_plan_query",
+      "description": "查询设备保养周期和下次保养。",
+      "examples": [
+        "卷绕机下次保养是什么时候？",
+        "化成柜保养清单？"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_SYSTEM_GREETING",
+      "name": "能力介绍",
+      "parent": "CELL_SYSTEM_SUPPORT",
+      "kind": 1,
+      "description": "说明系统能处理的电芯设备、质量、安全和实时查询范围。",
+      "examples": [
+        "你能做什么？",
+        "能查哪些设备问题？"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_SYSTEM_CLARIFY",
+      "name": "信息不足澄清",
+      "parent": "CELL_SYSTEM_SUPPORT",
+      "kind": 1,
+      "description": "当缺少设备、工序、报警或现象时引导补充。",
+      "examples": [
+        "设备有问题怎么办？",
+        "帮我查一下异常。"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_SYSTEM_ENGINEER",
+      "name": "转设备或工艺工程师",
+      "parent": "CELL_SYSTEM_SUPPORT",
+      "kind": 1,
+      "description": "把高风险或无法确认的问题升级给设备/工艺工程师。",
+      "examples": [
+        "转设备工程师",
+        "需要工艺工程师确认。"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_SYSTEM_QUALITY",
+      "name": "转质量工程师",
+      "parent": "CELL_SYSTEM_SUPPORT",
+      "kind": 1,
+      "description": "把质量判定和根因争议升级给质量工程师。",
+      "examples": [
+        "转质量工程师",
+        "这个缺陷谁来判定？"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_SYSTEM_EHS",
+      "name": "转 EHS 应急",
+      "parent": "CELL_SYSTEM_SUPPORT",
+      "kind": 1,
+      "description": "将泄漏、冒烟、热失控等高风险情况升级 EHS。",
+      "examples": [
+        "通知 EHS",
+        "这里有电芯冒烟。"
+      ],
+      "top_k": 5
+    },
+    {
+      "code": "CELL_SYSTEM_FEEDBACK",
+      "name": "答案反馈与纠错",
+      "parent": "CELL_SYSTEM_SUPPORT",
+      "kind": 1,
+      "description": "记录答案反馈、案例纠错和无答案转人工。",
+      "examples": [
+        "这个答案不对",
+        "提交案例纠错。"
+      ],
+      "top_k": 5
+    }
+  ]
+}

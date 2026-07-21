@@ -43,6 +43,11 @@ public class KnowledgeDocumentUpdateRequest {
     private String chunkConfig;
 
     /**
+     * 面向检索的业务元数据 JSON
+     */
+    private String metadataJson;
+
+    /**
      * Pipeline ID（PIPELINE 模式）
      */
     private String pipelineId;

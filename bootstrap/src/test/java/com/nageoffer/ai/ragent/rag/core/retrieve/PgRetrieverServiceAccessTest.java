@@ -25,6 +25,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -86,5 +87,28 @@ class PgRetrieverServiceAccessTest {
 
         assertTrue(sqlCaptor.getValue().contains("metadata->>'doc_id' IN (?, ?)"));
         assertTrue(List.of(parametersCaptor.getValue()).containsAll(List.of("doc-a", "doc-b")));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void addsScalarAndArrayMetadataFiltersToVectorQuery() {
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        EmbeddingService embeddingService = mock(EmbeddingService.class);
+        PgRetrieverService service = new PgRetrieverService(jdbcTemplate, embeddingService);
+        RetrieveRequest request = RetrieveRequest.builder()
+                .collectionName("cell-fault-collection")
+                .metadataFilters(Map.of(
+                        "process_code", List.of("winding", "stacking"),
+                        "effective_status", "有效"))
+                .build();
+
+        service.retrieveByVector(new float[]{0.2F, 0.3F}, request);
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Object[]> parametersCaptor = ArgumentCaptor.forClass(Object[].class);
+        verify(jdbcTemplate).query(sqlCaptor.capture(), any(RowMapper.class), parametersCaptor.capture());
+
+        assertTrue(sqlCaptor.getValue().contains("metadata @> jsonb_build_object"));
+        assertTrue(List.of(parametersCaptor.getValue()).containsAll(List.of("winding", "stacking", "有效")));
     }
 }

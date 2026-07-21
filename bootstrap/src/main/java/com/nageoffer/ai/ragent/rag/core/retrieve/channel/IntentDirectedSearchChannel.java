@@ -186,7 +186,13 @@ public class IntentDirectedSearchChannel implements SearchChannel {
                                                    int topKMultiplier,
                                                    KnowledgeAccessScope accessScope) {
         // 使用模板方法执行并行检索
-        return new IntentParallelRetriever(retrieverService, innerRetrievalExecutor, accessScope)
+        return new IntentParallelRetriever(
+                retrieverService,
+                innerRetrievalExecutor,
+                accessScope,
+                properties.getChannels().getIntentDirected().getSupplementalCollections(),
+                properties.getChannels().getIntentDirected().getMetadataFilters()
+        )
                 .executeParallelRetrieval(question, kbIntents, fallbackTopK, topKMultiplier);
     }
 }

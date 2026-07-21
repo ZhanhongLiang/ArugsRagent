@@ -18,6 +18,7 @@
 package com.nageoffer.ai.ragent.mcp.equipment;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,7 +27,15 @@ public class EquipmentOperationsConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(EquipmentOperationsService.class)
+    @Profile("!cell-factory")
     public EquipmentOperationsService inMemoryEquipmentOperationsService() {
         return new InMemoryEquipmentOperationsService();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(EquipmentOperationsService.class)
+    @Profile("cell-factory")
+    public EquipmentOperationsService cellFactoryEquipmentOperationsService() {
+        return new CellFactoryEquipmentOperationsService();
     }
 }
